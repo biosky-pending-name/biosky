@@ -19,15 +19,37 @@ interface IngesterConfig {
 }
 
 export class Ingester {
-  private firehose: FirehoseSubscription;
+  private firehose!: FirehoseSubscription;
   private db: Database;
+  private config: IngesterConfig;
   private isRunning = false;
 
   constructor(config: IngesterConfig) {
     this.db = new Database(config.databaseUrl);
+    this.config = config;
+  }
+
+  async start(): Promise<void> {
+    console.log("Starting ingester...");
+
+    // Initialize database
+    await this.db.connect();
+    await this.db.migrate();
+
+    // Load last cursor from database (for resumption after restart)
+    const savedCursor = await this.db.getCursor();
+    const cursor = this.config.cursor ?? savedCursor ?? undefined;
+
+    if (cursor) {
+      console.log(`Resuming from cursor: ${cursor}`);
+    } else {
+      console.log("Starting from current firehose position (no cursor)");
+    }
+
+    // Create firehose subscription with cursor
     this.firehose = new FirehoseSubscription({
-      relay: config.relay,
-      cursor: config.cursor,
+      relay: this.config.relay,
+      cursor,
       onObservation: (event) => this.handleObservation(event),
       onIdentification: (event) => this.handleIdentification(event),
     });
@@ -44,20 +66,6 @@ export class Ingester {
     this.firehose.on("error", (error) => {
       console.error("Firehose error:", error);
     });
-  }
-
-  async start(): Promise<void> {
-    console.log("Starting ingester...");
-
-    // Initialize database
-    await this.db.connect();
-    await this.db.migrate();
-
-    // Load last cursor from database
-    const savedCursor = await this.db.getCursor();
-    if (savedCursor) {
-      console.log(`Resuming from cursor: ${savedCursor}`);
-    }
 
     // Start firehose subscription
     await this.firehose.start();

@@ -257,7 +257,7 @@ export class FirehoseSubscription extends EventEmitter {
   private handleObservationOp(
     commit: { repo: string; blocks?: Buffer; seq: number; time: string },
     op: { action: string; path: string; cid?: { toString(): string } },
-    rkey: string
+    rkey: string,
   ): void {
     const event: ObservationEvent = {
       did: commit.repo,
@@ -276,7 +276,7 @@ export class FirehoseSubscription extends EventEmitter {
   private handleIdentificationOp(
     commit: { repo: string; blocks?: Buffer; seq: number; time: string },
     op: { action: string; path: string; cid?: { toString(): string } },
-    rkey: string
+    rkey: string,
   ): void {
     const event: IdentificationEvent = {
       did: commit.repo,
@@ -294,7 +294,7 @@ export class FirehoseSubscription extends EventEmitter {
 
   private extractRecord(
     blocks: Buffer | undefined,
-    _cid: { toString(): string } | undefined
+    _cid: { toString(): string } | undefined,
   ): unknown {
     // In a full implementation, we'd decode the CAR blocks and look up the CID
     // For now, return undefined - the appview can fetch the record separately
@@ -319,7 +319,7 @@ export class FirehoseSubscription extends EventEmitter {
     this.reconnectAttempts++;
 
     console.log(
-      `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
+      `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
     );
     setTimeout(() => this.connect(), delay);
   }
@@ -330,7 +330,7 @@ export class FirehoseSubscription extends EventEmitter {
 }
 
 export function createFirehoseSubscription(
-  options?: FirehoseOptions
+  options?: FirehoseOptions,
 ): FirehoseSubscription {
   return new FirehoseSubscription(options);
 }
