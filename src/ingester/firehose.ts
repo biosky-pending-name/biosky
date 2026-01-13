@@ -151,63 +151,76 @@ export class FirehoseSubscription extends EventEmitter {
   }
 
   private decodeFrame(
-    data: Buffer
+    data: Buffer,
   ): { header: { op: number; t: string }; body: unknown } | null {
     try {
-      // Messages come as concatenated CBOR objects
-      let offset = 0;
-      const header = decode(data.subarray(offset));
-      offset += this.getCborLength(data.subarray(offset));
-      const body = decode(data.subarray(offset));
+      // AT Protocol firehose sends DAG-CBOR frames
+      // Each frame has a header and body as sequential CBOR values
+      const headerLength = this.findCborEnd(data, 0);
+      if (headerLength === -1) return null;
+
+      const header = decode(data.subarray(0, headerLength));
+      const body = decode(data.subarray(headerLength));
+
       return { header, body };
     } catch {
       return null;
     }
   }
 
-  private getCborLength(data: Buffer): number {
-    // Simple CBOR length detection - this is a simplified version
-    // In production, use a proper CBOR streaming decoder
-    let i = 0;
-    const initial = data[i++];
-    const type = initial >> 5;
-    const additional = initial & 0x1f;
+  private findCborEnd(data: Buffer, start: number): number {
+    // Parse CBOR to find where the first value ends
+    if (start >= data.length) return -1;
 
-    if (additional < 24) {
-      return this.skipCborValue(data, type, additional, i);
-    } else if (additional === 24) {
-      return this.skipCborValue(data, type, data[i++], i);
-    } else if (additional === 25) {
-      const len = data.readUInt16BE(i);
-      return this.skipCborValue(data, type, len, i + 2);
-    } else if (additional === 26) {
-      const len = data.readUInt32BE(i);
-      return this.skipCborValue(data, type, len, i + 4);
+    const initial = data[start];
+    const majorType = initial >> 5;
+    const additionalInfo = initial & 0x1f;
+
+    let pos = start + 1;
+    let length: number;
+
+    // Get the length/value based on additional info
+    if (additionalInfo < 24) {
+      length = additionalInfo;
+    } else if (additionalInfo === 24) {
+      length = data[pos++];
+    } else if (additionalInfo === 25) {
+      length = data.readUInt16BE(pos);
+      pos += 2;
+    } else if (additionalInfo === 26) {
+      length = data.readUInt32BE(pos);
+      pos += 4;
+    } else if (additionalInfo === 27) {
+      length = Number(data.readBigUInt64BE(pos));
+      pos += 8;
+    } else {
+      return -1;
     }
 
-    // For complex cases, try to decode and measure
-    const decoded = decode(data);
-    const reencoded = Buffer.from(JSON.stringify(decoded));
-    return reencoded.length + 10; // Rough estimate
-  }
-
-  private skipCborValue(
-    data: Buffer,
-    type: number,
-    len: number,
-    offset: number
-  ): number {
-    switch (type) {
-      case 2: // bytes
-      case 3: // string
-        return offset + len;
+    switch (majorType) {
+      case 0: // unsigned int
+      case 1: // negative int
+      case 7: // float/simple
+        return pos;
+      case 2: // byte string
+      case 3: // text string
+        return pos + length;
       case 4: // array
+        for (let i = 0; i < length; i++) {
+          pos = this.findCborEnd(data, pos);
+          if (pos === -1) return -1;
+        }
+        return pos;
       case 5: // map
-        // For simplicity, decode the whole thing
-        decode(data);
-        return data.length;
+        for (let i = 0; i < length * 2; i++) {
+          pos = this.findCborEnd(data, pos);
+          if (pos === -1) return -1;
+        }
+        return pos;
+      case 6: // tag
+        return this.findCborEnd(data, pos);
       default:
-        return offset;
+        return -1;
     }
   }
 
