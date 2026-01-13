@@ -29,6 +29,10 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+*.d.ts
+*.d.ts.map
+*.js.map
+scripts/*.js
 
 # Vite
 src/frontend/dist/
