@@ -246,4 +246,4 @@ Unlike centralized platforms, BioSky data is stored on users' Personal Data Serv
 
 ## License
 
-MIT
+AGPL-3.0
