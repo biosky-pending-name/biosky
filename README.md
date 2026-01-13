@@ -1,6 +1,6 @@
 # BioSky
 
-A decentralized biodiversity observation platform built on the AT Protocol (atproto). Think iNaturalist, but federated.
+A decentralized biodiversity observation platform built on the AT Protocol.
 
 ## Architecture
 

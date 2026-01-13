@@ -2,6 +2,7 @@
   "name": "biosky",
   "version": "0.1.0",
   "description": "Decentralized biodiversity platform on AT Protocol",
+  "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
     "build": "tsc",
