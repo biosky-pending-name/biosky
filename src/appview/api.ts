@@ -26,6 +26,7 @@ interface AppViewConfig {
   port: number;
   databaseUrl: string;
   corsOrigins: string[];
+  publicUrl: string;
 }
 
 interface OccurrenceResponse {
