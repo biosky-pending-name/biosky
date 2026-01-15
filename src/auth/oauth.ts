@@ -14,8 +14,7 @@ import express from "express";
 import { randomBytes } from "crypto";
 
 interface OAuthConfig {
-  clientId: string;
-  redirectUri: string;
+  publicUrl: string;
   scope: string;
   stateStore: StateStore;
   sessionStore: SessionStore;
@@ -85,21 +84,30 @@ export class OAuthService {
   private config: OAuthConfig;
   private stateStore: StateStore;
   private sessionStore: SessionStore;
+  private privateKey: JoseKey | null = null;
+  private publicJwk: Record<string, unknown> | null = null;
 
   constructor(config: Partial<OAuthConfig> = {}) {
     this.stateStore = config.stateStore || new MemoryStateStore();
     this.sessionStore = config.sessionStore || new MemorySessionStore();
 
     this.config = {
-      clientId: config.clientId || process.env.OAUTH_CLIENT_ID || "",
-      redirectUri:
-        config.redirectUri ||
-        process.env.OAUTH_REDIRECT_URI ||
-        "http://localhost:3000/oauth/callback",
+      publicUrl:
+        config.publicUrl ||
+        process.env.PUBLIC_URL ||
+        "http://localhost:3000",
       scope: config.scope || "atproto",
       stateStore: this.stateStore,
       sessionStore: this.sessionStore,
     };
+  }
+
+  get clientId(): string {
+    return `${this.config.publicUrl}/client-metadata.json`;
+  }
+
+  get redirectUri(): string {
+    return `${this.config.publicUrl}/oauth/callback`;
   }
 
   async initialize(): Promise<void> {
@@ -107,34 +115,54 @@ export class OAuthService {
     try {
       await this.initializeClient();
     } catch (error) {
-      console.warn(
-        "OAuth initialization failed (this is okay for development):",
-        (error as Error).message,
-      );
+      console.error("OAuth initialization failed:", error);
+      console.error("Stack trace:", (error as Error).stack);
       console.warn("OAuth login will not be available");
     }
   }
 
   private async initializeClient(): Promise<void> {
-    // Generate a key pair for the OAuth client
-    const privateKey = await JoseKey.generate(["ES256"]);
+    // Generate a key pair for the OAuth client with a kid
+    const kid = `biosky-${Date.now()}`;
+    this.privateKey = await JoseKey.generate(["ES256"], kid);
+
+    // Get the full JWK with all required properties
+    const fullJwk = this.privateKey.jwk as Record<string, unknown>;
+
+    // Extract public JWK by removing private key components and adding required fields
+    const { d, ...publicComponents } = fullJwk;
+    this.publicJwk = {
+      ...publicComponents,
+      kid,
+      alg: "ES256",
+      key_ops: ["verify"],
+    };
+    console.log("Public JWK:", JSON.stringify(this.publicJwk, null, 2));
+
+    // Create a modified JWK for the keyset with all required fields
+    const keysetJwk = {
+      ...fullJwk,
+      kid,
+      alg: "ES256",
+      key_ops: ["sign"],
+    };
+
+    // Create a JoseKey from the modified JWK
+    const keyWithAlg = await JoseKey.fromJWK(keysetJwk);
+    console.log("Keyset key jwk:", JSON.stringify(keyWithAlg.jwk, null, 2));
 
     const options: NodeOAuthClientOptions = {
       clientMetadata: {
-        client_id: this.config.clientId,
+        client_id: this.clientId,
         client_name: "BioSky",
-        client_uri: "https://biosky.app",
-        redirect_uris: [this.config.redirectUri],
+        client_uri: this.config.publicUrl,
+        redirect_uris: [this.redirectUri],
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
         scope: this.config.scope,
-        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_method: "none",
         dpop_bound_access_tokens: true,
-        jwks: {
-          keys: [privateKey.publicJwk as any],
-        },
       },
-      keyset: [privateKey] as any,
       stateStore: {
         get: async (key: string) => {
           const value = await this.stateStore.get(key);
@@ -161,8 +189,23 @@ export class OAuthService {
       },
     };
 
+    console.log("Creating NodeOAuthClient with options...");
     this.client = new NodeOAuthClient(options);
-    console.log("OAuth client initialized");
+    console.log("OAuth client created successfully with client_id:", this.clientId);
+  }
+
+  getClientMetadata(): object {
+    return {
+      client_id: this.clientId,
+      client_name: "BioSky",
+      client_uri: this.config.publicUrl,
+      redirect_uris: [this.redirectUri],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      scope: this.config.scope,
+      token_endpoint_auth_method: "none",
+      dpop_bound_access_tokens: true,
+    };
   }
 
   async getAuthorizationUrl(
@@ -215,6 +258,11 @@ export class OAuthService {
   }
 
   setupRoutes(app: express.Application): void {
+    // Serve client metadata for AT Protocol OAuth discovery
+    app.get("/client-metadata.json", (_req, res) => {
+      res.json(this.getClientMetadata());
+    });
+
     // Login initiation
     app.get("/oauth/login", async (req, res) => {
       try {
@@ -224,15 +272,9 @@ export class OAuthService {
           return;
         }
 
-        const { url, state } = await this.getAuthorizationUrl(handle);
+        const { url } = await this.getAuthorizationUrl(handle);
 
-        // Store state in cookie for verification
-        res.cookie("oauth_state", state, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 600000,
-        });
-
+        console.log("OAuth login: redirecting to", url);
         res.redirect(url);
       } catch (error) {
         console.error("OAuth login error:", error);
@@ -249,12 +291,9 @@ export class OAuthService {
           iss: string;
         };
 
-        const storedState = req.cookies?.oauth_state;
-        if (state !== storedState) {
-          res.status(400).json({ error: "Invalid state parameter" });
-          return;
-        }
+        console.log("OAuth callback received with code and state");
 
+        // The OAuth client handles state verification internally via its stateStore
         const session = await this.handleCallback({ code, state, iss });
 
         // Set session cookie

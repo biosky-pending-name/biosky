@@ -117,12 +117,25 @@ export class Ingester {
   }
 }
 
+// Build DATABASE_URL from individual env vars (for GCP Secret Manager) or use DATABASE_URL directly
+function getDatabaseUrl(): string {
+  // If DB_PASSWORD is set, construct URL from individual components (GCP Secret Manager)
+  if (process.env.DB_PASSWORD) {
+    const host = process.env.DB_HOST || "localhost";
+    const name = process.env.DB_NAME || "biosky";
+    const user = process.env.DB_USER || "postgres";
+    const password = process.env.DB_PASSWORD;
+    return `postgresql://${user}:${password}@/${name}?host=${host}`;
+  }
+  // Otherwise use DATABASE_URL directly (local dev)
+  return process.env.DATABASE_URL || "postgresql://localhost:5432/biosky";
+}
+
 // CLI entry point
 async function main() {
   const config: IngesterConfig = {
     relay: process.env.RELAY_URL || "wss://bsky.network",
-    databaseUrl:
-      process.env.DATABASE_URL || "postgresql://localhost:5432/biosky",
+    databaseUrl: getDatabaseUrl(),
     cursor: process.env.CURSOR ? parseInt(process.env.CURSOR) : undefined,
   };
 

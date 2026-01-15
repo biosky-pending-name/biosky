@@ -15,7 +15,8 @@ steps:
       - '--region=$_REGION'
       - '--allow-unauthenticated'
       - '--add-cloudsql-instances=$PROJECT_ID:$_REGION:biosky-db'
-      - '--set-env-vars=DATABASE_URL=postgresql://postgres:$_DB_PASSWORD@/biosky?host=/cloudsql/$PROJECT_ID:$_REGION:biosky-db,PUBLIC_URL=$_PUBLIC_URL'
+      - '--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:$_REGION:biosky-db,DB_NAME=biosky,DB_USER=postgres,PUBLIC_URL=$_PUBLIC_URL'
+      - '--set-secrets=DB_PASSWORD=biosky-db-password:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/biosky-web'
