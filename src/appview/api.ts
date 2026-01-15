@@ -5,9 +5,13 @@
  * for the BioSky frontend.
  */
 
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import {
   Database,
   OccurrenceRow,
@@ -115,6 +119,13 @@ export class AppViewServer {
 
     // Taxonomy API
     this.setupTaxonomyRoutes();
+
+    // Serve frontend static files in production
+    const publicPath = path.join(__dirname, "../../public");
+    this.app.use(express.static(publicPath));
+    this.app.get("*", (_req, res) => {
+      res.sendFile(path.join(publicPath, "index.html"));
+    });
   }
 
   private setupOccurrenceRoutes(): void {
