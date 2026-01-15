@@ -36,3 +36,5 @@ scripts/*.js
 
 # Vite
 src/frontend/dist/
+
+/generated/prisma
