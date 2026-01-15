@@ -58,16 +58,12 @@
       "required": ["decimalLatitude", "decimalLongitude"],
       "properties": {
         "decimalLatitude": {
-          "type": "number",
-          "description": "The geographic latitude in decimal degrees (Darwin Core dwc:decimalLatitude). Valid range: -90 to 90.",
-          "minimum": -90,
-          "maximum": 90
+          "type": "string",
+          "description": "The geographic latitude in decimal degrees (Darwin Core dwc:decimalLatitude). Valid range: -90 to 90."
         },
         "decimalLongitude": {
-          "type": "number",
-          "description": "The geographic longitude in decimal degrees (Darwin Core dwc:decimalLongitude). Valid range: -180 to 180.",
-          "minimum": -180,
-          "maximum": 180
+          "type": "string",
+          "description": "The geographic longitude in decimal degrees (Darwin Core dwc:decimalLongitude). Valid range: -180 to 180."
         },
         "coordinateUncertaintyInMeters": {
           "type": "integer",
