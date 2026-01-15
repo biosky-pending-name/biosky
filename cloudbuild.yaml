@@ -1,0 +1,25 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/biosky-web', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/biosky-web']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'biosky-web'
+      - '--image=gcr.io/$PROJECT_ID/biosky-web'
+      - '--region=$_REGION'
+      - '--allow-unauthenticated'
+      - '--add-cloudsql-instances=$PROJECT_ID:$_REGION:biosky-db'
+      - '--set-env-vars=DATABASE_URL=postgresql://postgres:$_DB_PASSWORD@/biosky?host=/cloudsql/$PROJECT_ID:$_REGION:biosky-db,PUBLIC_URL=$_PUBLIC_URL'
+
+images:
+  - 'gcr.io/$PROJECT_ID/biosky-web'
+
+substitutions:
+  _REGION: us-central1
+  _PUBLIC_URL: https://biosky-web-378013734384.us-central1.run.app
