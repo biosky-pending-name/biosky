@@ -8,6 +8,7 @@
 import WebSocket from "ws";
 import { decode } from "cbor-x";
 import { EventEmitter } from "events";
+import type { OccurrenceEvent, IdentificationEvent } from "biosky-shared";
 
 const DEFAULT_RELAY = "wss://bsky.network";
 
@@ -30,29 +31,6 @@ export interface CommitOp {
   path: string;
   cid?: string;
   record?: unknown;
-}
-
-export interface OccurrenceEvent {
-  did: string;
-  uri: string;
-  cid: string;
-  action: "create" | "update" | "delete";
-  record?: unknown;
-  seq: number;
-  time: string;
-}
-
-// Legacy alias
-export type ObservationEvent = OccurrenceEvent;
-
-export interface IdentificationEvent {
-  did: string;
-  uri: string;
-  cid: string;
-  action: "create" | "update" | "delete";
-  record?: unknown;
-  seq: number;
-  time: string;
 }
 
 interface FirehoseOptions {
@@ -342,3 +320,6 @@ export function createFirehoseSubscription(
 ): FirehoseSubscription {
   return new FirehoseSubscription(options);
 }
+
+// Re-export event types from shared
+export type { OccurrenceEvent, IdentificationEvent } from "biosky-shared";

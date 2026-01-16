@@ -3,24 +3,37 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY packages/biosky-shared/package.json ./packages/biosky-shared/
+COPY packages/biosky-appview/package.json ./packages/biosky-appview/
+COPY packages/biosky-frontend/package.json ./packages/biosky-frontend/
+COPY packages/biosky-ingester/package.json ./packages/biosky-ingester/
+COPY packages/biosky-media-proxy/package.json ./packages/biosky-media-proxy/
+
 RUN npm ci
 
 COPY . .
 RUN npm run build
-RUN npm run frontend:build
 
 FROM node:22-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
+COPY packages/biosky-shared/package.json ./packages/biosky-shared/
+COPY packages/biosky-appview/package.json ./packages/biosky-appview/
+COPY packages/biosky-frontend/package.json ./packages/biosky-frontend/
+COPY packages/biosky-ingester/package.json ./packages/biosky-ingester/
+COPY packages/biosky-media-proxy/package.json ./packages/biosky-media-proxy/
+
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/packages/biosky-shared/dist ./packages/biosky-shared/dist
+COPY --from=builder /app/packages/biosky-appview/dist ./packages/biosky-appview/dist
+COPY --from=builder /app/dist/public ./dist/public
 
 ENV NODE_ENV=production
 ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["node", "dist/src/appview/api.js"]
+CMD ["node", "packages/biosky-appview/dist/api.js"]

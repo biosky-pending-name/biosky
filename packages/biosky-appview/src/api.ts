@@ -14,11 +14,13 @@ import cookieParser from "cookie-parser";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import {
   Database,
-  OccurrenceRow,
-  IdentificationRow,
-} from "../ingester/database.js";
-import { getIdentityResolver, Profile } from "../auth/identity.js";
-import { OAuthService } from "../auth/oauth.js";
+  getDatabaseUrl,
+  getIdentityResolver,
+  OAuthService,
+  type OccurrenceRow,
+  type IdentificationRow,
+  type Profile,
+} from "biosky-shared";
 import { TaxonomyResolver } from "./taxonomy.js";
 import { CommunityIdCalculator } from "./community-id.js";
 
@@ -439,20 +441,6 @@ export class AppViewServer {
   async stop(): Promise<void> {
     await this.db.disconnect();
   }
-}
-
-// Build DATABASE_URL from individual env vars (for GCP Secret Manager) or use DATABASE_URL directly
-function getDatabaseUrl(): string {
-  // If DB_PASSWORD is set, construct URL from individual components (GCP Secret Manager)
-  if (process.env.DB_PASSWORD) {
-    const host = process.env.DB_HOST || "localhost";
-    const name = process.env.DB_NAME || "biosky";
-    const user = process.env.DB_USER || "postgres";
-    const password = process.env.DB_PASSWORD;
-    return `postgresql://${user}:${password}@/${name}?host=${host}`;
-  }
-  // Otherwise use DATABASE_URL directly (local dev)
-  return process.env.DATABASE_URL || "postgresql://localhost:5432/biosky";
 }
 
 // CLI entry point

@@ -1,15 +1,25 @@
 /**
- * Database Layer for Biosky Ingester
+ * Database Layer for BioSky
  *
  * PostgreSQL with PostGIS extension for storing and querying
  * biodiversity occurrences spatially. Uses Darwin Core terminology.
  */
 
 import pg from "pg";
-import type { OccurrenceEvent, IdentificationEvent } from "./firehose.js";
-import type { Occurrence, Identification } from "../generated/types.js";
+import type {
+  OccurrenceEvent,
+  IdentificationEvent,
+  OccurrenceRow,
+  IdentificationRow,
+} from "../types.js";
+import type * as OrgRwellTestOccurrence from "../generated/types/org/rwell/test/occurrence.js";
+import type * as OrgRwellTestIdentification from "../generated/types/org/rwell/test/identification.js";
 
 const { Pool } = pg;
+
+// Type aliases for the record types
+type Occurrence = OrgRwellTestOccurrence.Main;
+type Identification = OrgRwellTestIdentification.Main;
 
 export class Database {
   private pool: pg.Pool;
@@ -210,24 +220,24 @@ export class Database {
         event.uri,
         event.cid,
         event.did,
-        record.basisOfRecord || "HumanObservation",
+        "HumanObservation",
         record.scientificName || null,
         record.eventDate,
         location.decimalLongitude,
         location.decimalLatitude,
         location.coordinateUncertaintyInMeters || null,
         record.verbatimLocality || null,
-        record.habitat || null,
-        record.occurrenceStatus || "present",
-        record.occurrenceRemarks || null,
-        record.individualCount || null,
-        record.sex || null,
-        record.lifeStage || null,
-        record.reproductiveCondition || null,
-        record.behavior || null,
-        record.establishmentMeans || null,
-        JSON.stringify(record.associatedMedia || []),
-        record.recordedBy || null,
+        null, // habitat
+        "present", // occurrenceStatus
+        record.notes || null,
+        null, // individualCount
+        null, // sex
+        null, // lifeStage
+        null, // reproductiveCondition
+        null, // behavior
+        null, // establishmentMeans
+        JSON.stringify(record.blobs || []),
+        null, // recordedBy
         record.createdAt,
       ],
     );
@@ -267,15 +277,15 @@ export class Database {
         event.did,
         record.subject.uri,
         record.subject.cid,
-        record.scientificName,
+        record.taxonName,
         record.taxonRank || null,
-        record.identificationQualifier || null,
-        record.taxonID || null,
-        record.identificationRemarks || null,
-        record.identificationVerificationStatus || null,
-        record.typeStatus || null,
+        null, // identificationQualifier
+        null, // taxonID
+        record.comment || null,
+        null, // identificationVerificationStatus
+        null, // typeStatus
         record.isAgreement || false,
-        record.dateIdentified,
+        record.createdAt,
       ],
     );
   }
@@ -392,48 +402,8 @@ export class Database {
   }
 }
 
-export interface OccurrenceRow {
-  uri: string;
-  cid: string;
-  did: string;
-  basis_of_record: string;
-  scientific_name: string | null;
-  event_date: Date;
-  latitude: number;
-  longitude: number;
-  coordinate_uncertainty_meters: number | null;
-  verbatim_locality: string | null;
-  habitat: string | null;
-  occurrence_status: string;
-  occurrence_remarks: string | null;
-  individual_count: number | null;
-  sex: string | null;
-  life_stage: string | null;
-  reproductive_condition: string | null;
-  behavior: string | null;
-  establishment_means: string | null;
-  associated_media: unknown[];
-  recorded_by: string | null;
-  created_at: Date;
-  distance_meters?: number;
-}
-
-export interface IdentificationRow {
-  uri: string;
-  cid: string;
-  did: string;
-  subject_uri: string;
-  subject_cid: string;
-  scientific_name: string;
-  taxon_rank: string | null;
-  identification_qualifier: string | null;
-  taxon_id: string | null;
-  identification_remarks: string | null;
-  identification_verification_status: string | null;
-  type_status: string | null;
-  is_agreement: boolean;
-  date_identified: Date;
-}
+// Re-export row types
+export type { OccurrenceRow, IdentificationRow };
 
 // Legacy type aliases for backwards compatibility
 export type ObservationRow = OccurrenceRow;

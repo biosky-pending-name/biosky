@@ -1,15 +1,18 @@
 /**
  * GENERATED CODE - DO NOT MODIFY
  */
-import { type ValidationResult, BlobRef } from '@atproto/lexicon'
-import { CID } from 'multiformats/cid'
-import { validate as _validate } from '../../../../lexicons'
+import { type BlobRef } from '@atproto/lexicon'
+import { validate as _validate } from '../../../../lexicons.js'
 import {
-  type $Typed,
   is$typed as _is$typed,
-  type OmitKey,
-} from '../../../../util'
-import type * as ComAtprotoRepoStrongRef from '../../../com/atproto/repo/strongRef.js'
+} from '../../../../util.js'
+
+/** A reference to a specific version of a record (AT Protocol strong ref). */
+interface StrongRef {
+  uri: string
+  cid: string
+}
+
 
 const is$typed = _is$typed,
   validate = _validate
@@ -17,7 +20,7 @@ const id = 'org.rwell.test.identification'
 
 export interface Main {
   $type: 'org.rwell.test.identification'
-  subject: ComAtprotoRepoStrongRef.Main
+  subject: StrongRef
   /** The scientific name being proposed for the observation. */
   taxonName: string
   /** The taxonomic rank of the identification (e.g., species, genus, family). */

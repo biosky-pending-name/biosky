@@ -4,6 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -11,14 +13,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "noEmit": true
+    "noEmit": false,
+    "skipLibCheck": true
   },
-  "references": [
-    { "path": "./packages/biosky-shared" },
-    { "path": "./packages/biosky-ingester" },
-    { "path": "./packages/biosky-appview" },
-    { "path": "./packages/biosky-media-proxy" }
-  ],
-  "include": ["scripts/**/*"],
-  "exclude": ["node_modules", "dist", "packages"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

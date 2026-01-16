@@ -6,11 +6,12 @@
  */
 
 import {
-  FirehoseSubscription,
-  OccurrenceEvent,
-  IdentificationEvent,
-} from "./firehose.js";
-import { Database } from "./database.js";
+  Database,
+  getDatabaseUrl,
+  type OccurrenceEvent,
+  type IdentificationEvent,
+} from "biosky-shared";
+import { FirehoseSubscription } from "./firehose.js";
 
 interface IngesterConfig {
   relay?: string;
@@ -115,20 +116,6 @@ export class Ingester {
       await this.db.saveCursor(cursor);
     }
   }
-}
-
-// Build DATABASE_URL from individual env vars (for GCP Secret Manager) or use DATABASE_URL directly
-function getDatabaseUrl(): string {
-  // If DB_PASSWORD is set, construct URL from individual components (GCP Secret Manager)
-  if (process.env.DB_PASSWORD) {
-    const host = process.env.DB_HOST || "localhost";
-    const name = process.env.DB_NAME || "biosky";
-    const user = process.env.DB_USER || "postgres";
-    const password = process.env.DB_PASSWORD;
-    return `postgresql://${user}:${password}@/${name}?host=${host}`;
-  }
-  // Otherwise use DATABASE_URL directly (local dev)
-  return process.env.DATABASE_URL || "postgresql://localhost:5432/biosky";
 }
 
 // CLI entry point

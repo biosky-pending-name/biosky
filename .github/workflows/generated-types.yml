@@ -27,11 +27,11 @@ jobs:
 
       - name: Check for diff
         run: |
-          if [ -n "$(git status --porcelain src/generated/)" ]; then
+          if [ -n "$(git status --porcelain packages/biosky-shared/src/generated/)" ]; then
             echo "Error: Generated types are out of date."
             echo "Please run 'npm run generate-types' and commit the changes."
             echo ""
             echo "Diff:"
-            git diff src/generated/
+            git diff packages/biosky-shared/src/generated/
             exit 1
           fi

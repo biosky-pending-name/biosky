@@ -7,7 +7,7 @@
 
 import express from "express";
 import { createHash } from "crypto";
-import { mkdir, readFile, writeFile, stat } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
 
 interface MediaProxyConfig {
@@ -266,6 +266,4 @@ async function main() {
   await proxy.start();
 }
 
-if (process.argv[1]?.endsWith("media-proxy.ts")) {
-  main().catch(console.error);
-}
+main().catch(console.error);
