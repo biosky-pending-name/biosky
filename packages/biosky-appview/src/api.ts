@@ -125,7 +125,12 @@ export class AppViewServer {
     this.setupTaxonomyRoutes();
 
     // Serve frontend static files in production
-    const publicPath = path.join(__dirname, "../../public");
+    // In dev: __dirname is packages/biosky-appview/src, public is at ../../dist/public
+    // In prod: __dirname is /app/packages/biosky-appview/dist, public is at /app/dist/public
+    const publicPath =
+      process.env.NODE_ENV === "production"
+        ? path.resolve("/app/dist/public")
+        : path.join(__dirname, "../../../dist/public");
     this.app.use(express.static(publicPath));
     this.app.get("*", (_req, res) => {
       res.sendFile(path.join(publicPath, "index.html"));
