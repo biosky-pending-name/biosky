@@ -150,6 +150,26 @@ export class Database {
       CREATE INDEX IF NOT EXISTS identifications_scientific_name_idx
         ON identifications(scientific_name);
 
+      -- OAuth state store (for PKCE flow, short-lived)
+      CREATE TABLE IF NOT EXISTS oauth_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL
+      );
+
+      -- Create index for cleanup of expired state
+      CREATE INDEX IF NOT EXISTS oauth_state_expires_idx ON oauth_state(expires_at);
+
+      -- OAuth sessions (for logged-in users)
+      CREATE TABLE IF NOT EXISTS oauth_sessions (
+        did TEXT PRIMARY KEY,
+        handle TEXT,
+        access_token TEXT,
+        refresh_token TEXT,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
       -- Community ID materialized view (refreshed periodically)
       CREATE MATERIALIZED VIEW IF NOT EXISTS community_ids AS
       SELECT
@@ -439,6 +459,85 @@ export class Database {
     await this.pool.query(
       "REFRESH MATERIALIZED VIEW CONCURRENTLY community_ids",
     );
+  }
+
+  // OAuth state methods (for PKCE flow)
+  async getOAuthState(key: string): Promise<string | undefined> {
+    const result = await this.pool.query(
+      "SELECT value FROM oauth_state WHERE key = $1 AND expires_at > NOW()",
+      [key],
+    );
+    return result.rows[0]?.value;
+  }
+
+  async setOAuthState(key: string, value: string, ttlMs = 600000): Promise<void> {
+    const expiresAt = new Date(Date.now() + ttlMs);
+    await this.pool.query(
+      `INSERT INTO oauth_state (key, value, expires_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (key) DO UPDATE SET value = $2, expires_at = $3`,
+      [key, value, expiresAt],
+    );
+  }
+
+  async deleteOAuthState(key: string): Promise<void> {
+    await this.pool.query("DELETE FROM oauth_state WHERE key = $1", [key]);
+  }
+
+  async cleanupExpiredOAuthState(): Promise<void> {
+    await this.pool.query("DELETE FROM oauth_state WHERE expires_at < NOW()");
+  }
+
+  // OAuth session methods
+  async getOAuthSession(did: string): Promise<{
+    did: string;
+    handle: string;
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt: number;
+  } | undefined> {
+    const result = await this.pool.query(
+      "SELECT did, handle, access_token, refresh_token, expires_at FROM oauth_sessions WHERE did = $1",
+      [did],
+    );
+    if (result.rows.length === 0) return undefined;
+    const row = result.rows[0];
+    return {
+      did: row.did,
+      handle: row.handle,
+      accessToken: row.access_token,
+      refreshToken: row.refresh_token || undefined,
+      expiresAt: new Date(row.expires_at).getTime(),
+    };
+  }
+
+  async setOAuthSession(session: {
+    did: string;
+    handle: string;
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt: number;
+  }): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO oauth_sessions (did, handle, access_token, refresh_token, expires_at)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (did) DO UPDATE SET
+         handle = $2,
+         access_token = $3,
+         refresh_token = $4,
+         expires_at = $5`,
+      [
+        session.did,
+        session.handle,
+        session.accessToken,
+        session.refreshToken || null,
+        new Date(session.expiresAt),
+      ],
+    );
+  }
+
+  async deleteOAuthSession(did: string): Promise<void> {
+    await this.pool.query("DELETE FROM oauth_sessions WHERE did = $1", [did]);
   }
 }
 

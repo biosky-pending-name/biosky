@@ -17,6 +17,8 @@ import {
   getDatabaseUrl,
   getIdentityResolver,
   OAuthService,
+  DatabaseStateStore,
+  DatabaseSessionStore,
   type OccurrenceRow,
   type IdentificationRow,
   type Profile,
@@ -87,7 +89,14 @@ export class AppViewServer {
 
     this.app = express();
     this.db = new Database(this.config.databaseUrl);
-    this.oauth = new OAuthService({ publicUrl: this.config.publicUrl });
+
+    // Use database-backed stores for OAuth to persist sessions across deploys
+    this.oauth = new OAuthService({
+      publicUrl: this.config.publicUrl,
+      stateStore: new DatabaseStateStore(this.db),
+      sessionStore: new DatabaseSessionStore(this.db),
+    });
+
     this.taxonomy = new TaxonomyResolver();
     this.communityId = new CommunityIdCalculator(this.db);
 

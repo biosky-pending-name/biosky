@@ -80,6 +80,48 @@ class MemorySessionStore implements SessionStore {
   }
 }
 
+// Database-backed stores for production (persist across deploys)
+interface DatabaseLike {
+  getOAuthState(key: string): Promise<string | undefined>;
+  setOAuthState(key: string, value: string, ttlMs?: number): Promise<void>;
+  deleteOAuthState(key: string): Promise<void>;
+  getOAuthSession(did: string): Promise<SessionData | undefined>;
+  setOAuthSession(session: SessionData): Promise<void>;
+  deleteOAuthSession(did: string): Promise<void>;
+}
+
+class DatabaseStateStore implements StateStore {
+  constructor(private db: DatabaseLike) {}
+
+  async get(key: string): Promise<string | undefined> {
+    return this.db.getOAuthState(key);
+  }
+
+  async set(key: string, value: string, ttl = 600000): Promise<void> {
+    await this.db.setOAuthState(key, value, ttl);
+  }
+
+  async del(key: string): Promise<void> {
+    await this.db.deleteOAuthState(key);
+  }
+}
+
+class DatabaseSessionStore implements SessionStore {
+  constructor(private db: DatabaseLike) {}
+
+  async get(key: string): Promise<SessionData | undefined> {
+    return this.db.getOAuthSession(key);
+  }
+
+  async set(key: string, value: SessionData): Promise<void> {
+    await this.db.setOAuthSession(value);
+  }
+
+  async del(key: string): Promise<void> {
+    await this.db.deleteOAuthSession(key);
+  }
+}
+
 export class OAuthService {
   private client: NodeOAuthClient | null = null;
   private config: OAuthConfig;
@@ -363,5 +405,5 @@ export class OAuthService {
   }
 }
 
-export { MemoryStateStore, MemorySessionStore };
-export type { StateStore, SessionStore, SessionData };
+export { MemoryStateStore, MemorySessionStore, DatabaseStateStore, DatabaseSessionStore };
+export type { StateStore, SessionStore, SessionData, DatabaseLike };
