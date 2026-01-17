@@ -25,7 +25,21 @@ export class Database {
   private pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
+    this.pool = new Pool({
+      connectionString,
+      // Cloud SQL connections can be closed by the proxy after idle time.
+      // These settings help handle connection drops gracefully.
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      // Automatically reconnect if connection is lost
+      allowExitOnIdle: false,
+    });
+
+    // Handle pool errors to prevent crashes
+    this.pool.on("error", (err) => {
+      console.error("Unexpected database pool error:", err.message);
+    });
   }
 
   async connect(): Promise<void> {
@@ -164,12 +178,24 @@ export class Database {
   }
 
   async saveCursor(cursor: number): Promise<void> {
-    await this.pool.query(
-      `INSERT INTO ingester_state (key, value, updated_at)
-       VALUES ('cursor', $1, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
-      [cursor.toString()],
-    );
+    // Retry once on connection error since Cloud SQL connections can drop
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await this.pool.query(
+          `INSERT INTO ingester_state (key, value, updated_at)
+           VALUES ('cursor', $1, NOW())
+           ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+          [cursor.toString()],
+        );
+        return;
+      } catch (err) {
+        if (attempt === 0 && err instanceof Error && err.message.includes("Connection terminated")) {
+          console.warn("Connection dropped, retrying saveCursor...");
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 
   async upsertOccurrence(event: OccurrenceEvent): Promise<void> {
