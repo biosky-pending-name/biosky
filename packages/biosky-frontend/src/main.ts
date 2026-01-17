@@ -260,13 +260,15 @@ class BioSkyApp {
       await this.submitObservation();
     });
 
-    // Photo input - extract EXIF
-    document.getElementById("photo-input")?.addEventListener("change", (e) => {
-      const input = e.target as HTMLInputElement;
-      const file = input.files?.[0];
-      if (file) {
-        this.extractExif(file);
-      }
+    // Quick species buttons
+    document.querySelectorAll(".quick-species button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const species = btn.getAttribute("data-species");
+        const input = document.getElementById("species-input") as HTMLInputElement;
+        if (species && input) {
+          input.value = species;
+        }
+      });
     });
   }
 
@@ -394,10 +396,7 @@ class BioSkyApp {
   }
 
   private showUploadModal(): void {
-    if (!this.currentUser) {
-      alert("Please log in to submit observations");
-      return;
-    }
+    // Demo mode - no login required
 
     // Get current map center as default location
     const center = this.map?.getCenter();
@@ -462,40 +461,75 @@ class BioSkyApp {
     });
   }
 
-  private async extractExif(file: File): Promise<void> {
-    // In a full implementation, we'd use exifr or similar library
-    // For now, use current location or map center
-    if (this.currentLocation) {
-      const latInput = document.getElementById("lat-input") as HTMLInputElement;
-      const lngInput = document.getElementById("lng-input") as HTMLInputElement;
-      const locationDisplay = document.getElementById("location-display") as HTMLInputElement;
-
-      latInput.value = this.currentLocation.lat.toFixed(6);
-      lngInput.value = this.currentLocation.lng.toFixed(6);
-      locationDisplay.value = `${this.currentLocation.lat.toFixed(4)}, ${this.currentLocation.lng.toFixed(4)}`;
-    }
-  }
-
   private async submitObservation(): Promise<void> {
     const speciesInput = document.getElementById("species-input") as HTMLInputElement;
     const notesInput = document.getElementById("notes-input") as HTMLTextAreaElement;
     const latInput = document.getElementById("lat-input") as HTMLInputElement;
     const lngInput = document.getElementById("lng-input") as HTMLInputElement;
-    const photoInput = document.getElementById("photo-input") as HTMLInputElement;
+    const submitBtn = document.querySelector('#observation-form button[type="submit"]') as HTMLButtonElement;
 
-    if (!speciesInput.value || !latInput.value || !lngInput.value) {
-      alert("Please fill in species and location");
+    if (!latInput.value || !lngInput.value) {
+      alert("Please provide a location");
       return;
     }
 
-    // In a full implementation, we'd:
-    // 1. Upload the photo to the user's PDS
-    // 2. Create the observation record with the blob reference
-    // 3. Write the record to the user's repo
+    // Disable button while submitting
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
 
-    alert("Observation submitted! (Demo mode - not actually saved)");
-    this.hideUploadModal();
-    this.loadObservationsInView();
+    try {
+      const response = await fetch(`${API_BASE}/api/occurrences`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          scientificName: speciesInput.value || "Unknown species",
+          latitude: parseFloat(latInput.value),
+          longitude: parseFloat(lngInput.value),
+          notes: notesInput.value || undefined,
+          eventDate: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit");
+      }
+
+      const result = await response.json();
+
+      // Show success feedback
+      this.showSuccessMessage("Observation submitted successfully!");
+      this.hideUploadModal();
+      this.loadObservationsInView();
+    } catch (error) {
+      console.error("Failed to submit observation:", error);
+      alert(`Failed to submit: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+    }
+  }
+
+  private showSuccessMessage(message: string): void {
+    // Create toast notification
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.classList.add("show");
+    });
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   }
 }
 

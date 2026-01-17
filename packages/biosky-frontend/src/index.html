@@ -237,6 +237,94 @@
         font-size: 0.875rem;
         border: 2px solid #0a0a0a;
       }
+
+      /* Toast notifications */
+      .toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #22c55e;
+        color: #0a0a0a;
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        z-index: 2000;
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+
+      /* Species suggestions dropdown */
+      #species-suggestions {
+        margin-top: 0.5rem;
+      }
+
+      #species-suggestions .suggestion {
+        padding: 0.75rem;
+        background: #0a0a0a;
+        border: 1px solid #333;
+        border-radius: 0.25rem;
+        margin-bottom: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      #species-suggestions .suggestion:hover {
+        background: #333;
+        border-color: #22c55e;
+      }
+
+      #species-suggestions .suggestion span {
+        display: block;
+        font-size: 0.75rem;
+        color: #666;
+        margin-top: 0.25rem;
+      }
+
+      /* Demo banner */
+      .demo-banner {
+        background: #f59e0b;
+        color: #0a0a0a;
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      /* Quick species buttons */
+      .quick-species {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .quick-species button {
+        padding: 0.5rem 0.75rem;
+        border-radius: 1rem;
+        border: 1px solid #333;
+        background: #0a0a0a;
+        color: #fafafa;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .quick-species button:hover {
+        border-color: #22c55e;
+        background: #1a1a1a;
+      }
+
+      /* Form disabled state */
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -271,37 +359,35 @@
       <!-- Upload Modal -->
       <div id="upload-modal" class="modal-overlay hidden">
         <div class="modal">
-          <h2>New Observation</h2>
+          <div class="demo-banner">Demo Mode - No login required</div>
+          <h2 style="margin-top: 1rem">New Observation</h2>
           <form id="observation-form">
             <div class="form-group">
-              <label for="photo-input">Photo</label>
-              <input
-                type="file"
-                id="photo-input"
-                accept="image/*"
-                capture="environment"
-              />
-            </div>
-            <div class="form-group">
-              <label for="species-input">Species (scientific name)</label>
+              <label for="species-input">Species</label>
               <input
                 type="text"
                 id="species-input"
                 placeholder="e.g. Eschscholzia californica"
                 autocomplete="off"
               />
+              <div class="quick-species">
+                <button type="button" data-species="Eschscholzia californica">California Poppy</button>
+                <button type="button" data-species="Quercus agrifolia">Coast Live Oak</button>
+                <button type="button" data-species="Columba livia">Rock Dove</button>
+                <button type="button" data-species="Sciurus griseus">Western Gray Squirrel</button>
+              </div>
               <div id="species-suggestions"></div>
             </div>
             <div class="form-group">
-              <label for="notes-input">Notes</label>
+              <label for="notes-input">Notes (optional)</label>
               <textarea
                 id="notes-input"
-                rows="3"
+                rows="2"
                 placeholder="Describe what you observed..."
               ></textarea>
             </div>
             <div class="form-group">
-              <label>Location</label>
+              <label>Location (from map center)</label>
               <input type="text" id="location-display" readonly />
               <input type="hidden" id="lat-input" />
               <input type="hidden" id="lng-input" />

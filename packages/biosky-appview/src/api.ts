@@ -138,6 +138,65 @@ export class AppViewServer {
   }
 
   private setupOccurrenceRoutes(): void {
+    // Create new occurrence (proof of concept - bypasses AT Protocol)
+    this.app.post("/api/occurrences", async (req, res) => {
+      try {
+        const {
+          scientificName,
+          latitude,
+          longitude,
+          notes,
+          eventDate,
+        } = req.body;
+
+        if (!latitude || !longitude) {
+          res.status(400).json({ error: "latitude and longitude are required" });
+          return;
+        }
+
+        // Generate a fake AT Protocol URI for the PoC
+        const did = "did:plc:demo-user-" + Math.random().toString(36).slice(2, 10);
+        const rkey = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const uri = `at://${did}/org.rwell.test.occurrence/${rkey}`;
+        const cid = "bafyrei" + Math.random().toString(36).slice(2, 50);
+
+        // Insert directly into database
+        await this.db.upsertOccurrence({
+          uri,
+          cid,
+          did,
+          action: "create",
+          seq: Date.now(), // Fake sequence number for PoC
+          time: new Date().toISOString(),
+          record: {
+            $type: "org.rwell.test.occurrence",
+            basisOfRecord: "HumanObservation",
+            scientificName: scientificName || undefined,
+            eventDate: eventDate || new Date().toISOString(),
+            location: {
+              decimalLatitude: latitude,
+              decimalLongitude: longitude,
+              coordinateUncertaintyInMeters: 50,
+              geodeticDatum: "WGS84",
+            },
+            occurrenceStatus: "present",
+            occurrenceRemarks: notes || undefined,
+            associatedMedia: [],
+            createdAt: new Date().toISOString(),
+          },
+        });
+
+        res.status(201).json({
+          success: true,
+          uri,
+          message: "Observation created (demo mode)",
+        });
+      } catch (error) {
+        console.error("Error creating occurrence:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
     // Get occurrences nearby
     this.app.get("/api/occurrences/nearby", async (req, res) => {
       try {
