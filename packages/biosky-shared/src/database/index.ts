@@ -178,8 +178,20 @@ export class Database {
   }
 
   async saveCursor(cursor: number): Promise<void> {
-    // Retry once on connection error since Cloud SQL connections can drop
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // Retry on connection errors since Cloud SQL connections can drop
+    const isConnectionError = (err: unknown): boolean => {
+      if (!(err instanceof Error)) return false;
+      const msg = err.message.toLowerCase();
+      return (
+        msg.includes("connection terminated") ||
+        msg.includes("connection timeout") ||
+        msg.includes("epipe") ||
+        msg.includes("econnreset") ||
+        msg.includes("connection refused")
+      );
+    };
+
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await this.pool.query(
           `INSERT INTO ingester_state (key, value, updated_at)
@@ -189,8 +201,10 @@ export class Database {
         );
         return;
       } catch (err) {
-        if (attempt === 0 && err instanceof Error && err.message.includes("Connection terminated")) {
-          console.warn("Connection dropped, retrying saveCursor...");
+        if (attempt < 2 && isConnectionError(err)) {
+          console.warn(`Connection error on attempt ${attempt + 1}, retrying saveCursor...`);
+          // Brief delay before retry
+          await new Promise((r) => setTimeout(r, 100 * (attempt + 1)));
           continue;
         }
         throw err;
