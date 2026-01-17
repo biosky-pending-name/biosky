@@ -32,7 +32,6 @@ Thumbs.db
 *.d.ts
 *.d.ts.map
 *.js.map
-scripts/*.js
 
 # Vite
 src/frontend/dist/
