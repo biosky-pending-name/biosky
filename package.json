@@ -12,6 +12,9 @@
     "build": "npm run build -w biosky-shared && npm run build -w biosky-appview -w biosky-ingester -w biosky-media-proxy -w biosky-frontend",
     "dev": "npm run dev --workspace=biosky-appview",
     "generate-types": "node scripts/generate-types.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:publish": "tsx scripts/publish-observation.ts",
     "ingester": "npm run start --workspace=biosky-ingester",
     "appview": "npm run start --workspace=biosky-appview",
@@ -22,10 +25,12 @@
   "devDependencies": {
     "@atproto/lex-cli": "^0.9.8",
     "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^4.0.17",
     "dotenv": "^17.2.3",
     "prisma": "^7.2.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.17"
   },
   "engines": {
     "node": ">=20.19.0"
