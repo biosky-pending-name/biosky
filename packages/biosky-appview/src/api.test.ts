@@ -69,7 +69,7 @@ vi.mock("biosky-shared", async (importOriginal) => {
 
 // Mock CommunityIdCalculator
 vi.mock("./community-id.js", () => {
-  const MockCommunityIdCalculator = function () {
+  const MockCommunityIdCalculator = function (this: object) {
     mockCommunityIdCalculator = createMockCommunityIdCalculator();
     Object.assign(this, mockCommunityIdCalculator);
   };
