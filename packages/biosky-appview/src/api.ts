@@ -173,18 +173,15 @@ export class AppViewServer {
           // User is authenticated - post to AT Protocol network
           const record = {
             $type: "org.rwell.test.occurrence",
-            basisOfRecord: "HumanObservation",
             scientificName: scientificName || undefined,
             eventDate: eventDate || new Date().toISOString(),
             location: {
-              decimalLatitude: latitude,
-              decimalLongitude: longitude,
+              decimalLatitude: String(latitude),
+              decimalLongitude: String(longitude),
               coordinateUncertaintyInMeters: 50,
               geodeticDatum: "WGS84",
             },
-            occurrenceStatus: "present",
             notes: notes || undefined,
-            blobs: [],
             createdAt: new Date().toISOString(),
           };
 
@@ -332,32 +329,7 @@ export class AppViewServer {
       }
     });
 
-    // Get single occurrence
-    this.app.get("/api/occurrences/:uri(*)", async (req, res) => {
-      try {
-        const uri = req.params.uri;
-        const row = await this.db.getOccurrence(uri);
-
-        if (!row) {
-          res.status(404).json({ error: "Occurrence not found" });
-          return;
-        }
-
-        const [occurrence] = await this.enrichOccurrences([row]);
-        const identifications =
-          await this.db.getIdentificationsForOccurrence(uri);
-
-        res.json({
-          occurrence,
-          identifications: await this.enrichIdentifications(identifications),
-        });
-      } catch (error) {
-        console.error("Error fetching occurrence:", error);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    });
-
-    // Get GeoJSON for map clustering
+    // Get GeoJSON for map clustering (must be before :uri(*) route)
     this.app.get("/api/occurrences/geojson", async (req, res) => {
       try {
         const minLat = parseFloat(req.query.minLat as string);
@@ -398,6 +370,31 @@ export class AppViewServer {
         });
       } catch (error) {
         console.error("Error generating GeoJSON:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    // Get single occurrence (must be after specific routes like /geojson)
+    this.app.get("/api/occurrences/:uri(*)", async (req, res) => {
+      try {
+        const uri = req.params.uri;
+        const row = await this.db.getOccurrence(uri);
+
+        if (!row) {
+          res.status(404).json({ error: "Occurrence not found" });
+          return;
+        }
+
+        const [occurrence] = await this.enrichOccurrences([row]);
+        const identifications =
+          await this.db.getIdentificationsForOccurrence(uri);
+
+        res.json({
+          occurrence,
+          identifications: await this.enrichIdentifications(identifications),
+        });
+      } catch (error) {
+        console.error("Error fetching occurrence:", error);
         res.status(500).json({ error: "Internal server error" });
       }
     });
@@ -557,8 +554,11 @@ export class AppViewServer {
   }
 }
 
-// CLI entry point
-async function main() {
+// CLI entry point - only run when executed directly, not when imported
+const isMainModule = import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith('biosky-appview/dist/api.js');
+
+if (isMainModule) {
   const server = new AppViewServer({
     port: parseInt(process.env.PORT || "3000"),
     databaseUrl: getDatabaseUrl(),
@@ -573,10 +573,8 @@ async function main() {
     process.exit(0);
   });
 
-  await server.start();
+  server.start().catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });
 }
-
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});
