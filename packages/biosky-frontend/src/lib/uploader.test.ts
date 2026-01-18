@@ -345,4 +345,116 @@ describe('OccurrenceUploader', () => {
       })
     })
   })
+
+  describe('extractExif', () => {
+    // Helper to create a mock file with specific bytes
+    function createMockFileWithBytes(bytes: number[], lastModified?: number): File {
+      const buffer = new ArrayBuffer(bytes.length)
+      const view = new Uint8Array(buffer)
+      bytes.forEach((b, i) => { view[i] = b })
+
+      const file = {
+        name: 'test.jpg',
+        type: 'image/jpeg',
+        size: bytes.length,
+        lastModified: lastModified || Date.now(),
+        arrayBuffer: () => Promise.resolve(buffer)
+      } as unknown as File
+
+      return file
+    }
+
+    it('returns empty object for non-JPEG file', async () => {
+      // PNG file signature (not JPEG)
+      const pngFile = createMockFileWithBytes([0x89, 0x50, 0x4e, 0x47])
+
+      const result = await uploader.extractExif(pngFile)
+
+      expect(result).toEqual({})
+    })
+
+    it('returns dateTime from lastModified when no EXIF', async () => {
+      // Valid JPEG without EXIF data
+      const lastModified = new Date('2024-01-15T10:30:00Z').getTime()
+      const jpegNoExif = createMockFileWithBytes([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10], lastModified)
+
+      const result = await uploader.extractExif(jpegNoExif)
+
+      expect(result.dateTime).toEqual(new Date(lastModified))
+    })
+
+    it('handles JPEG with EXIF marker', async () => {
+      // JPEG with EXIF marker 0xffe1
+      const jpegWithExif = createMockFileWithBytes([
+        0xff, 0xd8, // JPEG SOI
+        0xff, 0xe1, // EXIF marker
+        0x00, 0x08, // length
+        0x45, 0x78, 0x69, 0x66, 0x00, 0x00 // "Exif\0\0"
+      ])
+
+      const result = await uploader.extractExif(jpegWithExif)
+
+      // Should parse without error, even if EXIF data is incomplete
+      expect(result).toBeDefined()
+    })
+
+    it('handles JPEG with non-EXIF marker before EXIF', async () => {
+      // JPEG with APP0 (0xffe0) before EXIF
+      const lastModified = new Date('2024-03-20T15:00:00Z').getTime()
+      const jpegWithApp0 = createMockFileWithBytes([
+        0xff, 0xd8, // JPEG SOI
+        0xff, 0xe0, // APP0 marker
+        0x00, 0x04, // length = 4 (including length bytes)
+        0x00, 0x00, // data
+        0xff, 0xe1, // EXIF marker
+        0x00, 0x08, // length
+        0x45, 0x78, 0x69, 0x66, 0x00, 0x00 // "Exif\0\0"
+      ], lastModified)
+
+      const result = await uploader.extractExif(jpegWithApp0)
+
+      // Should fallback to lastModified if no EXIF datetime found
+      expect(result.dateTime).toEqual(new Date(lastModified))
+    })
+
+    it('handles error during parsing gracefully', async () => {
+      const errorFile = {
+        name: 'test.jpg',
+        type: 'image/jpeg',
+        size: 100,
+        lastModified: Date.now(),
+        arrayBuffer: () => Promise.reject(new Error('Read error'))
+      } as unknown as File
+
+      const result = await uploader.extractExif(errorFile)
+
+      expect(result).toEqual({})
+    })
+
+    it('handles very short JPEG file', async () => {
+      const shortJpeg = createMockFileWithBytes([0xff, 0xd8])
+
+      const result = await uploader.extractExif(shortJpeg)
+
+      // Should not crash, may return empty or partial data
+      expect(result).toBeDefined()
+    })
+  })
+
+  describe('compressImage', () => {
+    // Note: compressImage uses browser APIs (Image, canvas) which aren't available in Node
+    // These tests verify the method exists and document expected behavior
+    // Full testing would require jsdom or a browser environment
+
+    it('method exists on uploader', () => {
+      expect(typeof uploader.compressImage).toBe('function')
+    })
+
+    // In a browser environment, we would test:
+    // - Image scaling when width > maxWidth
+    // - Quality parameter affects output size
+    // - Returns a File with type image/jpeg
+    // - Rejects when image fails to load
+    // - Rejects when canvas.toBlob returns null
+  })
 })

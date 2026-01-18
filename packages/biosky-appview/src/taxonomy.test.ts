@@ -472,6 +472,36 @@ describe('TaxonomyResolver', () => {
 
       expect(results).toEqual([])
     })
+
+    it('handles matchGbif network error gracefully in validate', async () => {
+      global.fetch = vi.fn()
+        .mockRejectedValueOnce(new Error('GBIF match network error'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ results: [] })
+        })
+
+      const result = await resolver.validate('Test species matcherror')
+
+      expect(result.valid).toBe(false)
+      expect(result.suggestions).toEqual([])
+    })
+
+    it('handles matchGbif non-ok response in validate', async () => {
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ results: [] })
+        })
+
+      const result = await resolver.validate('Test species notok')
+
+      expect(result.valid).toBe(false)
+    })
   })
 
   // ============================================================================

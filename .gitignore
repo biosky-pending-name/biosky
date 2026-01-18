@@ -37,3 +37,5 @@ Thumbs.db
 src/frontend/dist/
 
 /generated/prisma
+
+coverage

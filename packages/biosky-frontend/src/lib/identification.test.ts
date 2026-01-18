@@ -310,4 +310,136 @@ describe('IdentificationService', () => {
       })
     })
   })
+
+  describe('update', () => {
+    it('throws if not logged in', async () => {
+      const noSessionAgent = { session: undefined } as AtpAgent
+      const noSessionService = new IdentificationService(noSessionAgent)
+
+      await expect(
+        noSessionService.update('at://did:plc:test/org.rwell.test.identification/abc123', {
+          taxonName: 'Quercus rubra'
+        })
+      ).rejects.toThrow('Not logged in')
+    })
+
+    it('fetches existing record and updates it', async () => {
+      const result = await service.update(
+        'at://did:plc:test/org.rwell.test.identification/abc123',
+        { taxonName: 'Quercus rubra' }
+      )
+
+      expect(mockAgent.com!.atproto.repo.getRecord).toHaveBeenCalledWith({
+        repo: 'did:plc:test',
+        collection: 'org.rwell.test.identification',
+        rkey: 'abc123'
+      })
+      expect(mockAgent.com!.atproto.repo.putRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          repo: 'did:plc:test',
+          collection: 'org.rwell.test.identification',
+          rkey: 'abc123',
+          record: expect.objectContaining({
+            taxonName: 'Quercus rubra'
+          })
+        })
+      )
+      expect(result).toEqual({
+        uri: 'at://did:plc:test/org.rwell.test.identification/1',
+        cid: 'new-cid'
+      })
+    })
+
+    it('preserves existing fields when not updated', async () => {
+      await service.update(
+        'at://did:plc:test/org.rwell.test.identification/abc123',
+        { comment: 'New comment' }
+      )
+
+      expect(mockAgent.com!.atproto.repo.putRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          record: expect.objectContaining({
+            taxonName: 'Quercus alba', // preserved from existing
+            taxonRank: 'species', // preserved from existing
+            comment: 'New comment' // updated
+          })
+        })
+      )
+    })
+
+    it('updates confidence when provided', async () => {
+      await service.update(
+        'at://did:plc:test/org.rwell.test.identification/abc123',
+        { confidence: 'low' }
+      )
+
+      expect(mockAgent.com!.atproto.repo.putRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          record: expect.objectContaining({
+            confidence: 'low'
+          })
+        })
+      )
+    })
+
+    it('clears comment when set to empty string', async () => {
+      await service.update(
+        'at://did:plc:test/org.rwell.test.identification/abc123',
+        { comment: '' }
+      )
+
+      expect(mockAgent.com!.atproto.repo.putRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          record: expect.objectContaining({
+            comment: ''
+          })
+        })
+      )
+    })
+  })
+
+  describe('getMyIdentifications', () => {
+    it('throws if not logged in', async () => {
+      const noSessionAgent = { session: undefined } as AtpAgent
+      const noSessionService = new IdentificationService(noSessionAgent)
+
+      await expect(
+        noSessionService.getMyIdentifications()
+      ).rejects.toThrow('Not logged in')
+    })
+
+    it('lists records with default limit', async () => {
+      await service.getMyIdentifications()
+
+      expect(mockAgent.com!.atproto.repo.listRecords).toHaveBeenCalledWith({
+        repo: 'did:plc:test',
+        collection: 'org.rwell.test.identification',
+        limit: 50
+      })
+    })
+
+    it('lists records with custom limit', async () => {
+      await service.getMyIdentifications(100)
+
+      expect(mockAgent.com!.atproto.repo.listRecords).toHaveBeenCalledWith({
+        repo: 'did:plc:test',
+        collection: 'org.rwell.test.identification',
+        limit: 100
+      })
+    })
+
+    it('returns records from response', async () => {
+      const mockRecords = [
+        { uri: 'at://test/1', cid: 'cid1', value: { taxonName: 'Species A' } },
+        { uri: 'at://test/2', cid: 'cid2', value: { taxonName: 'Species B' } }
+      ]
+      vi.mocked(mockAgent.com!.atproto.repo.listRecords).mockResolvedValueOnce({
+        data: { records: mockRecords }
+      } as never)
+
+      const result = await service.getMyIdentifications()
+
+      expect(result).toEqual(mockRecords)
+    })
+  })
 })

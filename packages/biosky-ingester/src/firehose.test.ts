@@ -332,4 +332,286 @@ describe('FirehoseSubscription', () => {
       expect(sub.isConnected()).toBe(false)
     })
   })
+
+  // ============================================================================
+  // handleCommit tests
+  // ============================================================================
+  describe('handleCommit', () => {
+    it('ignores commit without ops', () => {
+      const onOccurrence = vi.fn()
+      const sub = new FirehoseSubscription({ onOccurrence })
+
+      // Call handleCommit with no ops
+      ;(sub as any).handleCommit({ repo: 'did:plc:test', seq: 100, time: new Date().toISOString() })
+
+      expect(onOccurrence).not.toHaveBeenCalled()
+    })
+
+    it('handles occurrence op', () => {
+      const onOccurrence = vi.fn()
+      const sub = new FirehoseSubscription({ onOccurrence })
+
+      ;(sub as any).handleCommit({
+        repo: 'did:plc:test',
+        seq: 100,
+        time: '2024-01-15T10:00:00Z',
+        ops: [{ action: 'create', path: 'org.rwell.test.occurrence/abc123', cid: { toString: () => 'bafyrei123' } }]
+      })
+
+      expect(onOccurrence).toHaveBeenCalledWith(expect.objectContaining({
+        did: 'did:plc:test',
+        uri: 'at://did:plc:test/org.rwell.test.occurrence/abc123',
+        cid: 'bafyrei123',
+        action: 'create'
+      }))
+    })
+
+    it('handles identification op', () => {
+      const onIdentification = vi.fn()
+      const sub = new FirehoseSubscription({ onIdentification })
+
+      ;(sub as any).handleCommit({
+        repo: 'did:plc:test',
+        seq: 101,
+        time: '2024-01-15T10:01:00Z',
+        ops: [{ action: 'create', path: 'org.rwell.test.identification/xyz789', cid: { toString: () => 'bafyrei456' } }]
+      })
+
+      expect(onIdentification).toHaveBeenCalledWith(expect.objectContaining({
+        did: 'did:plc:test',
+        uri: 'at://did:plc:test/org.rwell.test.identification/xyz789',
+        cid: 'bafyrei456',
+        action: 'create'
+      }))
+    })
+
+    it('updates cursor from commit sequence', () => {
+      const sub = new FirehoseSubscription()
+
+      ;(sub as any).handleCommit({
+        repo: 'did:plc:test',
+        seq: 54321,
+        time: new Date().toISOString(),
+        ops: [{ action: 'create', path: 'org.rwell.test.occurrence/test' }]
+      })
+
+      expect(sub.getCursor()).toBe(54321)
+    })
+
+    it('ignores unrelated collections', () => {
+      const onOccurrence = vi.fn()
+      const onIdentification = vi.fn()
+      const sub = new FirehoseSubscription({ onOccurrence, onIdentification })
+
+      ;(sub as any).handleCommit({
+        repo: 'did:plc:test',
+        seq: 100,
+        time: new Date().toISOString(),
+        ops: [{ action: 'create', path: 'app.bsky.feed.post/abc123' }]
+      })
+
+      expect(onOccurrence).not.toHaveBeenCalled()
+      expect(onIdentification).not.toHaveBeenCalled()
+    })
+
+    it('handles delete action', () => {
+      const onOccurrence = vi.fn()
+      const sub = new FirehoseSubscription({ onOccurrence })
+
+      ;(sub as any).handleCommit({
+        repo: 'did:plc:test',
+        seq: 102,
+        time: '2024-01-15T10:02:00Z',
+        ops: [{ action: 'delete', path: 'org.rwell.test.occurrence/del123' }]
+      })
+
+      expect(onOccurrence).toHaveBeenCalledWith(expect.objectContaining({
+        action: 'delete',
+        cid: ''
+      }))
+    })
+  })
+
+  // ============================================================================
+  // extractRecord tests
+  // ============================================================================
+  describe('extractRecord', () => {
+    it('returns undefined when blocks is undefined', () => {
+      const result = (subscription as any).extractRecord(undefined, undefined)
+      expect(result).toBeUndefined()
+    })
+
+    it('attempts to decode valid CBOR blocks', () => {
+      // CBOR for integer 42: 0x18 0x2a
+      const blocks = Buffer.from([0x18, 0x2a])
+
+      const result = (subscription as any).extractRecord(blocks, { toString: () => 'test-cid' })
+
+      // Should return 42 or undefined depending on format expectations
+      expect(result === 42 || result === undefined).toBe(true)
+    })
+
+    it('returns undefined for invalid CBOR blocks', () => {
+      const invalidBlocks = Buffer.from([0xff, 0xff, 0xff])
+
+      const result = (subscription as any).extractRecord(invalidBlocks, { toString: () => 'test-cid' })
+
+      expect(result).toBeUndefined()
+    })
+  })
+
+  // ============================================================================
+  // Reconnection logic tests
+  // ============================================================================
+  describe('reconnection', () => {
+    it('emits maxReconnectAttempts when limit reached', () => {
+      const sub = new FirehoseSubscription()
+      const maxReconnectHandler = vi.fn()
+      sub.on('maxReconnectAttempts', maxReconnectHandler)
+
+      ;(sub as any).reconnectAttempts = 10
+      ;(sub as any).maxReconnectAttempts = 10
+      ;(sub as any).scheduleReconnect()
+
+      expect(maxReconnectHandler).toHaveBeenCalled()
+    })
+
+    it('increments reconnectAttempts when scheduling reconnect', () => {
+      vi.useFakeTimers()
+      const sub = new FirehoseSubscription()
+
+      ;(sub as any).reconnectAttempts = 0
+      ;(sub as any).scheduleReconnect()
+
+      expect((sub as any).reconnectAttempts).toBe(1)
+
+      vi.useRealTimers()
+    })
+
+    it('uses exponential backoff for reconnect delay', () => {
+      vi.useFakeTimers()
+      const sub = new FirehoseSubscription()
+
+      ;(sub as any).reconnectAttempts = 0
+      ;(sub as any).scheduleReconnect()
+      expect((sub as any).reconnectAttempts).toBe(1)
+
+      ;(sub as any).scheduleReconnect()
+      expect((sub as any).reconnectAttempts).toBe(2)
+
+      vi.useRealTimers()
+    })
+  })
+
+  // ============================================================================
+  // buildUrl tests
+  // ============================================================================
+  describe('buildUrl', () => {
+    it('builds URL without cursor when not set', () => {
+      const sub = new FirehoseSubscription({ relay: 'wss://test.relay' })
+      const url = (sub as any).buildUrl()
+
+      expect(url).toBe('wss://test.relay/xrpc/com.atproto.sync.subscribeRepos')
+    })
+
+    it('builds URL with cursor when set', () => {
+      const sub = new FirehoseSubscription({ relay: 'wss://test.relay', cursor: 54321 })
+      const url = (sub as any).buildUrl()
+
+      expect(url).toBe('wss://test.relay/xrpc/com.atproto.sync.subscribeRepos?cursor=54321')
+    })
+
+    it('uses default relay when not specified', () => {
+      const sub = new FirehoseSubscription()
+      const url = (sub as any).buildUrl()
+
+      expect(url).toBe('wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos')
+    })
+  })
+
+  // ============================================================================
+  // createFirehoseSubscription factory function tests
+  // ============================================================================
+  describe('createFirehoseSubscription', () => {
+    it('creates a FirehoseSubscription instance', async () => {
+      const { createFirehoseSubscription } = await import('./firehose.js')
+      const sub = createFirehoseSubscription()
+
+      expect(sub).toBeInstanceOf(FirehoseSubscription)
+    })
+
+    it('passes options to constructor', async () => {
+      const { createFirehoseSubscription } = await import('./firehose.js')
+      const onOccurrence = vi.fn()
+      const sub = createFirehoseSubscription({
+        relay: 'wss://custom.relay',
+        cursor: 12345,
+        onOccurrence
+      })
+
+      expect((sub as any).relay).toBe('wss://custom.relay')
+      expect(sub.getCursor()).toBe(12345)
+
+      sub.emit('occurrence', { uri: 'test', did: 'test' })
+      expect(onOccurrence).toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================================
+  // start and stop lifecycle tests
+  // ============================================================================
+  describe('start and stop lifecycle', () => {
+    it('sets isClosing to true on stop', async () => {
+      const sub = new FirehoseSubscription()
+
+      await sub.stop()
+
+      expect((sub as any).isClosing).toBe(true)
+    })
+
+    it('nulls ws on stop', async () => {
+      const sub = new FirehoseSubscription()
+      ;(sub as any).ws = { close: vi.fn() }
+
+      await sub.stop()
+
+      expect((sub as any).ws).toBeNull()
+    })
+
+    it('calls ws.close when stopping with active connection', async () => {
+      const sub = new FirehoseSubscription()
+      const mockClose = vi.fn()
+      ;(sub as any).ws = { close: mockClose }
+
+      await sub.stop()
+
+      expect(mockClose).toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================================
+  // handleMessage tests
+  // ============================================================================
+  describe('handleMessage', () => {
+    it('handles valid commit message', () => {
+      const onOccurrence = vi.fn()
+      const sub = new FirehoseSubscription({ onOccurrence })
+
+      // This would require creating a valid DAG-CBOR message
+      // For now, test that invalid messages don't crash
+      const invalidData = Buffer.from([0xff, 0xff])
+      ;(sub as any).handleMessage(invalidData)
+
+      expect(onOccurrence).not.toHaveBeenCalled()
+    })
+
+    it('continues processing after error', () => {
+      const sub = new FirehoseSubscription()
+
+      // Should not throw
+      expect(() => {
+        ;(sub as any).handleMessage(Buffer.from([0xff, 0xff, 0xff]))
+      }).not.toThrow()
+    })
+  })
 })

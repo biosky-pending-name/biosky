@@ -123,11 +123,13 @@ describe('CommunityIdCalculator', () => {
       subject_cid: 'subject-cid',
       scientific_name: scientificName,
       taxon_rank: options.taxonRank || 'species',
+      identification_qualifier: null,
+      taxon_id: null,
+      identification_remarks: null,
+      identification_verification_status: null,
+      type_status: null,
       is_agreement: options.isAgreement ?? false,
-      confidence: 'medium',
-      comment: null,
-      created_at: new Date(),
-      indexed_at: new Date()
+      date_identified: new Date()
     }
   }
 
@@ -363,6 +365,64 @@ describe('CommunityIdCalculator', () => {
       const result = await calculator.getQualityGrade('test-uri')
 
       expect(result).toBe('casual')
+    })
+  })
+
+  describe('calculateBatch', () => {
+    it('returns results for multiple occurrence URIs', async () => {
+      const identifications1 = [
+        createIdentification('Quercus alba'),
+        createIdentification('Quercus alba')
+      ]
+      const identifications2 = [
+        createIdentification('Acer rubrum')
+      ]
+      vi.mocked(mockDb.getIdentificationsForOccurrence!)
+        .mockResolvedValueOnce(identifications1)
+        .mockResolvedValueOnce(identifications2)
+        .mockResolvedValueOnce([])
+
+      const results = await calculator.calculateBatch(['uri1', 'uri2', 'uri3'])
+
+      expect(results.size).toBe(3)
+      expect(results.get('uri1')?.scientificName).toBe('Quercus alba')
+      expect(results.get('uri1')?.isResearchGrade).toBe(true)
+      expect(results.get('uri2')?.scientificName).toBe('Acer rubrum')
+      expect(results.get('uri2')?.isResearchGrade).toBe(false)
+      expect(results.get('uri3')).toBeNull()
+    })
+
+    it('returns empty map for empty input', async () => {
+      const results = await calculator.calculateBatch([])
+
+      expect(results.size).toBe(0)
+    })
+  })
+
+  describe('calculateWeighted', () => {
+    it('delegates to calculate for now', async () => {
+      const identifications = [
+        createIdentification('Pinus strobus'),
+        createIdentification('Pinus strobus')
+      ]
+      vi.mocked(mockDb.getIdentificationsForOccurrence!).mockResolvedValue(identifications)
+
+      const result = await calculator.calculateWeighted('test-uri')
+
+      expect(result).not.toBeNull()
+      expect(result!.scientificName).toBe('Pinus strobus')
+      expect(result!.isResearchGrade).toBe(true)
+    })
+  })
+
+  describe('findWinner edge cases', () => {
+    it('returns null when taxonCounts is empty (via internal groupByTaxon)', async () => {
+      // This tests the findWinner([], 0) path
+      vi.mocked(mockDb.getIdentificationsForOccurrence!).mockResolvedValue([])
+
+      const result = await calculator.calculate('test-uri')
+
+      expect(result).toBeNull()
     })
   })
 })
