@@ -10,7 +10,7 @@ import {
   type NodeOAuthClientOptions,
 } from "@atproto/oauth-client-node";
 import { JoseKey } from "@atproto/jwk-jose";
-import { AtpAgent } from "@atproto/api";
+import { Agent, AtpAgent } from "@atproto/api";
 import express from "express";
 import { randomBytes } from "crypto";
 
@@ -308,6 +308,25 @@ export class OAuthService {
     return this.sessionStore.get(did);
   }
 
+  /**
+   * Get an authenticated Agent for making AT Protocol API calls on behalf of a user.
+   * Returns null if the OAuth client is not initialized or session cannot be restored.
+   */
+  async getAgent(did: string): Promise<Agent | null> {
+    if (!this.client) {
+      console.error("OAuth client not initialized");
+      return null;
+    }
+
+    try {
+      const oauthSession = await this.client.restore(did);
+      return new Agent(oauthSession);
+    } catch (error) {
+      console.error("Failed to restore OAuth session for", did, error);
+      return null;
+    }
+  }
+
   async logout(did: string): Promise<void> {
     await this.sessionStore.del(did);
   }
@@ -407,5 +426,5 @@ export class OAuthService {
   }
 }
 
-export { MemoryStateStore, MemorySessionStore, DatabaseStateStore, DatabaseSessionStore };
+export { MemoryStateStore, MemorySessionStore, DatabaseStateStore, DatabaseSessionStore, Agent };
 export type { StateStore, SessionStore, SessionData, DatabaseLike };

@@ -296,6 +296,16 @@
         font-weight: 500;
       }
 
+      /* Authenticated banner */
+      .auth-banner {
+        background: #22c55e;
+        color: #0a0a0a;
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
       /* Quick species buttons */
       .quick-species {
         display: flex;
@@ -359,7 +369,7 @@
       <!-- Upload Modal -->
       <div id="upload-modal" class="modal-overlay hidden">
         <div class="modal">
-          <div class="demo-banner">Demo Mode - No login required</div>
+          <div id="upload-banner" class="demo-banner">Demo Mode - Login to post to AT Protocol</div>
           <h2 style="margin-top: 1rem">New Observation</h2>
           <form id="observation-form">
             <div class="form-group">

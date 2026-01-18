@@ -396,7 +396,17 @@ class BioSkyApp {
   }
 
   private showUploadModal(): void {
-    // Demo mode - no login required
+    // Update banner based on auth state
+    const banner = document.getElementById("upload-banner");
+    if (banner) {
+      if (this.currentUser) {
+        banner.className = "auth-banner";
+        banner.textContent = `Posting as @${this.currentUser.handle}`;
+      } else {
+        banner.className = "demo-banner";
+        banner.textContent = "Demo Mode - Login to post to AT Protocol";
+      }
+    }
 
     // Get current map center as default location
     const center = this.map?.getCenter();
