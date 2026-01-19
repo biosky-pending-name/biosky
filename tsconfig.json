@@ -11,7 +11,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "noEmit": true
+    "noEmit": true,
+    "skipLibCheck": true
   },
   "references": [
     { "path": "./packages/biosky-shared" },
