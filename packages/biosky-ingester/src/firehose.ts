@@ -33,11 +33,17 @@ export interface CommitOp {
   record?: unknown;
 }
 
+export interface CommitTimingInfo {
+  seq: number;
+  time: string;
+}
+
 interface FirehoseOptions {
   relay?: string;
   cursor?: number;
   onOccurrence?: (event: OccurrenceEvent) => void | Promise<void>;
   onIdentification?: (event: IdentificationEvent) => void | Promise<void>;
+  onCommit?: (info: CommitTimingInfo) => void;
   /** @deprecated Use onOccurrence instead */
   onObservation?: (event: OccurrenceEvent) => void | Promise<void>;
 }
@@ -64,6 +70,9 @@ export class FirehoseSubscription extends EventEmitter {
     }
     if (options.onIdentification) {
       this.on("identification", options.onIdentification);
+    }
+    if (options.onCommit) {
+      this.on("commit", options.onCommit);
     }
   }
 
@@ -222,6 +231,9 @@ export class FirehoseSubscription extends EventEmitter {
       seq: number;
       time: string;
     };
+
+    // Emit timing info for all commits (for lag tracking)
+    this.emit("commit", { seq: commit.seq, time: commit.time });
 
     if (!commit.ops) return;
 

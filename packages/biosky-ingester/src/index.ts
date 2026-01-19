@@ -80,6 +80,9 @@ export class Ingester {
       cursor,
       onOccurrence: (event) => this.handleOccurrence(event),
       onIdentification: (event) => this.handleIdentification(event),
+      onCommit: (info) => {
+        this.lastProcessed = { time: info.time, seq: info.seq };
+      },
     });
 
     // Set up event handlers
@@ -363,7 +366,6 @@ export class Ingester {
         await this.db.deleteOccurrence(event.uri);
       }
       this.stats.occurrences++;
-      this.lastProcessed = { time: event.time, seq: event.seq };
       this.addRecentEvent({
         type: "occurrence",
         action: event.action,
@@ -386,7 +388,6 @@ export class Ingester {
         await this.db.deleteIdentification(event.uri);
       }
       this.stats.identifications++;
-      this.lastProcessed = { time: event.time, seq: event.seq };
       this.addRecentEvent({
         type: "identification",
         action: event.action,
