@@ -51,12 +51,15 @@ export async function fetchObservation(
   uri: string
 ): Promise<{ observation: Observation } | null> {
   try {
-    const response = await fetch(
-      `${API_BASE}/api/occurrences/${encodeURIComponent(uri)}`
-    );
+    const url = `${API_BASE}/api/occurrences/${encodeURIComponent(uri)}`;
+    console.log("fetchObservation - uri:", uri);
+    console.log("fetchObservation - url:", url);
+    const response = await fetch(url);
+    console.log("fetchObservation - response status:", response.status);
     if (!response.ok) return null;
     return response.json();
-  } catch {
+  } catch (e) {
+    console.error("fetchObservation error:", e);
     return null;
   }
 }

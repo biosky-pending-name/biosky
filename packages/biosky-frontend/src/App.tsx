@@ -7,6 +7,7 @@ import { Header } from "./components/layout/Header";
 import { BottomNav } from "./components/layout/BottomNav";
 import { FeedView } from "./components/feed/FeedView";
 import { MapView } from "./components/map/MapView";
+import { ObservationDetail } from "./components/observation/ObservationDetail";
 import { LoginModal } from "./components/modals/LoginModal";
 import { UploadModal } from "./components/modals/UploadModal";
 import { FAB } from "./components/common/FAB";
@@ -27,6 +28,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<FeedView />} />
           <Route path="/map" element={<MapView />} />
+          <Route path="/observation/:uri" element={<ObservationDetail />} />
         </Routes>
       </main>
       <FAB />

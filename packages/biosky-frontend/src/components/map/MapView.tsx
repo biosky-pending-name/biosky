@@ -197,8 +197,10 @@ function showPopup(
   coords: [number, number]
 ) {
   const imageHtml = observation.images[0]
-    ? `<img src="${getImageUrl(observation.images[0])}" alt="${observation.scientificName}" />`
+    ? `<img src="${getImageUrl(observation.images[0])}" alt="${observation.scientificName}" style="width: 100%; border-radius: 0.5rem; margin-bottom: 0.5rem;" />`
     : "";
+
+  const detailUrl = `/observation/${encodeURIComponent(observation.uri)}`;
 
   new maplibregl.Popup({ maxWidth: "300px" })
     .setLngLat(coords)
@@ -212,10 +214,13 @@ function showPopup(
         <div style="font-size: 0.875rem; color: #999; margin-bottom: 0.5rem;">
           by @${observation.observer.handle || observation.observer.did.slice(0, 20)}
         </div>
-        <div style="font-size: 0.75rem; color: #666;">
+        <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.75rem;">
           ${new Date(observation.eventDate).toLocaleDateString()}
           ${observation.verbatimLocality ? ` &bull; ${observation.verbatimLocality}` : ""}
         </div>
+        <a href="${detailUrl}" style="display: block; text-align: center; padding: 0.5rem; background: #22c55e; color: #0a0a0a; border-radius: 0.375rem; text-decoration: none; font-size: 0.875rem; font-weight: 500;">
+          View Details
+        </a>
       </div>
     `
     )

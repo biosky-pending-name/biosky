@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { Observation } from "../../services/types";
 import { getImageUrl } from "../../services/api";
 import styles from "./FeedItem.module.css";
@@ -32,8 +33,10 @@ export function FeedItem({ observation }: FeedItemProps) {
     ? getImageUrl(observation.images[0])
     : "";
 
+  const observationUrl = `/observation/${encodeURIComponent(observation.uri)}`;
+
   return (
-    <div className={styles.item}>
+    <Link to={observationUrl} className={styles.item}>
       <div className={styles.avatar}>
         {observation.observer.avatar && (
           <img src={observation.observer.avatar} alt={displayName} />
@@ -58,6 +61,6 @@ export function FeedItem({ observation }: FeedItemProps) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
