@@ -11,10 +11,12 @@ use chrono::{DateTime, Utc};
 use ciborium::Value as CborValue;
 use futures_util::StreamExt;
 use std::io::Cursor;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
+
+const TIMING_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 
 const DEFAULT_RELAY: &str = "wss://bsky.network";
 const MAX_RECONNECT_ATTEMPTS: u32 = 10;
@@ -51,6 +53,8 @@ pub struct FirehoseSubscription {
     config: FirehoseConfig,
     event_tx: mpsc::Sender<FirehoseEvent>,
     cursor: Option<i64>,
+    last_timing: Option<CommitTimingInfo>,
+    last_timing_sent: Instant,
 }
 
 impl FirehoseSubscription {
@@ -60,6 +64,8 @@ impl FirehoseSubscription {
             config,
             event_tx,
             cursor,
+            last_timing: None,
+            last_timing_sent: Instant::now(),
         }
     }
 
@@ -167,11 +173,14 @@ impl FirehoseSubscription {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now());
 
-        // Emit commit timing info for lag tracking
-        let _ = self
-            .event_tx
-            .send(FirehoseEvent::Commit(CommitTimingInfo { seq, time }))
-            .await;
+        // Store timing info locally, only send periodically to reduce overhead
+        self.last_timing = Some(CommitTimingInfo { seq, time });
+        if self.last_timing_sent.elapsed() >= TIMING_UPDATE_INTERVAL {
+            if let Some(ref timing) = self.last_timing {
+                let _ = self.event_tx.send(FirehoseEvent::Commit(timing.clone())).await;
+            }
+            self.last_timing_sent = Instant::now();
+        }
 
         // Parse operations
         let ops = get_cbor_array(&body, "ops").unwrap_or_default();
