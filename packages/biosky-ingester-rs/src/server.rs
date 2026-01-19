@@ -131,144 +131,36 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BioSky Ingester (Rust)</title>
+  <title>BioSky Ingester</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 2rem;
-      min-height: 100vh;
-    }
-    .container { max-width: 800px; margin: 0 auto; }
-    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #38bdf8; }
-    .badge {
-      display: inline-block;
-      background: #f97316;
-      color: white;
-      padding: 0.125rem 0.5rem;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      margin-left: 0.5rem;
-      vertical-align: middle;
-    }
-    .card {
-      background: #1e293b;
-      border-radius: 0.5rem;
-      padding: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #334155;
-    }
-    .status-row:last-child { border-bottom: none; }
-    .label { color: #94a3b8; }
-    .value { font-weight: 600; font-family: monospace; }
-    .status-dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-right: 0.5rem;
-    }
-    .status-dot.connected { background: #22c55e; }
-    .status-dot.disconnected { background: #ef4444; }
-    .events { margin-top: 1rem; }
-    .event {
-      padding: 0.75rem;
-      background: #0f172a;
-      border-radius: 0.25rem;
-      margin-bottom: 0.5rem;
-      font-family: monospace;
-      font-size: 0.875rem;
-    }
-    .event-time { color: #64748b; }
-    .event-type {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      margin-right: 0.5rem;
-    }
-    .event-type.occurrence { background: #166534; color: #bbf7d0; }
-    .event-type.identification { background: #1e40af; color: #bfdbfe; }
-    .event-action { color: #fbbf24; }
-    .event-uri {
-      color: #94a3b8;
-      word-break: break-all;
-      display: block;
-      margin-top: 0.25rem;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    .stat {
-      text-align: center;
-      padding: 1rem;
-      background: #0f172a;
-      border-radius: 0.25rem;
-    }
-    .stat-value { font-size: 2rem; font-weight: bold; color: #38bdf8; }
-    .stat-label { color: #64748b; font-size: 0.875rem; }
-    .no-events { color: #64748b; font-style: italic; }
+    body { font-family: monospace; padding: 1rem; }
+    table { border-collapse: collapse; margin-bottom: 1rem; }
+    td, th { text-align: left; padding: 0.25rem 1rem 0.25rem 0; }
+    .connected { color: green; }
+    .disconnected { color: red; }
+    h2 { margin-top: 1rem; }
+    .event { margin: 0.25rem 0; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🌿 BioSky Ingester <span class="badge">Rust</span></h1>
+  <h1>BioSky Ingester</h1>
 
-    <div class="card">
-      <div class="status-row">
-        <span class="label">Status</span>
-        <span class="value" id="status">Loading...</span>
-      </div>
-      <div class="status-row">
-        <span class="label">Cursor</span>
-        <span class="value" id="cursor">-</span>
-      </div>
-      <div class="status-row">
-        <span class="label">Uptime</span>
-        <span class="value" id="uptime">-</span>
-      </div>
-      <div class="status-row">
-        <span class="label">Lag</span>
-        <span class="value" id="lag">-</span>
-      </div>
-    </div>
+  <table>
+    <tr><td>Status</td><td id="status">Loading...</td></tr>
+    <tr><td>Cursor</td><td id="cursor">-</td></tr>
+    <tr><td>Uptime</td><td id="uptime">-</td></tr>
+    <tr><td>Lag</td><td id="lag">-</td></tr>
+  </table>
 
-    <div class="card">
-      <h2 style="margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">Session Stats</h2>
-      <div class="stats-grid">
-        <div class="stat">
-          <div class="stat-value" id="occurrences">0</div>
-          <div class="stat-label">Occurrences</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" id="identifications">0</div>
-          <div class="stat-label">Identifications</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" id="errors">0</div>
-          <div class="stat-label">Errors</div>
-        </div>
-      </div>
-    </div>
+  <h2>Stats</h2>
+  <table>
+    <tr><td>Occurrences</td><td id="occurrences">0</td></tr>
+    <tr><td>Identifications</td><td id="identifications">0</td></tr>
+    <tr><td>Errors</td><td id="errors">0</td></tr>
+  </table>
 
-    <div class="card">
-      <h2 style="margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">Recent Events</h2>
-      <div class="events" id="events">
-        <div class="no-events">No events yet...</div>
-      </div>
-    </div>
-  </div>
+  <h2>Recent Events</h2>
+  <div id="events">No events yet...</div>
 
   <script>
     function formatDuration(seconds) {
@@ -282,16 +174,9 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 
     function formatLag(lastProcessed) {
       if (!lastProcessed || !lastProcessed.time) return '-';
-      const eventTime = new Date(lastProcessed.time).getTime();
-      const now = Date.now();
-      const lagMs = now - eventTime;
+      const lagMs = Date.now() - new Date(lastProcessed.time).getTime();
       if (lagMs < 0) return '0s';
-      const lagSeconds = Math.floor(lagMs / 1000);
-      return formatDuration(lagSeconds);
-    }
-
-    function formatTime(iso) {
-      return new Date(iso).toLocaleTimeString();
+      return formatDuration(Math.floor(lagMs / 1000));
     }
 
     async function refresh() {
@@ -299,9 +184,10 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
         const res = await fetch('/api/stats');
         const data = await res.json();
 
-        document.getElementById('status').innerHTML =
-          '<span class="status-dot ' + (data.connected ? 'connected' : 'disconnected') + '"></span>' +
-          (data.connected ? 'Connected' : 'Disconnected');
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = data.connected ? 'Connected' : 'Disconnected';
+        statusEl.className = data.connected ? 'connected' : 'disconnected';
+
         document.getElementById('cursor').textContent = data.cursor?.toLocaleString() || '-';
         document.getElementById('uptime').textContent = formatDuration(data.uptime);
         document.getElementById('lag').textContent = formatLag(data.lastProcessed);
@@ -311,20 +197,15 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 
         const eventsEl = document.getElementById('events');
         if (data.recentEvents.length === 0) {
-          eventsEl.innerHTML = '<div class="no-events">No events yet...</div>';
+          eventsEl.textContent = 'No events yet...';
         } else {
           eventsEl.innerHTML = data.recentEvents.map(e =>
-            '<div class="event">' +
-              '<span class="event-time">' + formatTime(e.time) + '</span> ' +
-              '<span class="event-type ' + e.type + '">' + e.type + '</span>' +
-              '<span class="event-action">' + e.action + '</span>' +
-              '<span class="event-uri">' + e.uri + '</span>' +
-            '</div>'
+            '<div class="event">' + new Date(e.time).toLocaleTimeString() + ' [' + e.type + '] ' + e.action + ' ' + e.uri + '</div>'
           ).join('');
         }
       } catch (err) {
-        document.getElementById('status').innerHTML =
-          '<span class="status-dot disconnected"></span>Error';
+        document.getElementById('status').textContent = 'Error';
+        document.getElementById('status').className = 'disconnected';
       }
     }
 
