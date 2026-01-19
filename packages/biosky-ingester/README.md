@@ -39,11 +39,11 @@ cargo run --release
 
 ```bash
 # Build and push to GCR
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/biosky-ingester-rs
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/biosky-ingester
 
 # Deploy to Cloud Run
-gcloud run deploy biosky-ingester-rs \
-  --image gcr.io/YOUR_PROJECT_ID/biosky-ingester-rs \
+gcloud run deploy biosky-ingester \
+  --image gcr.io/YOUR_PROJECT_ID/biosky-ingester \
   --region us-central1 \
   --cpu 4 \
   --memory 2Gi \
@@ -64,11 +64,11 @@ gcloud builds submit --config cloudbuild.yaml
 
 ```bash
 # Build
-docker build -t biosky-ingester-rs .
+docker build -t biosky-ingester .
 
 # Run
 docker run -p 8080:8080 \
   -e DATABASE_URL="postgresql://..." \
   -e RELAY_URL="wss://bsky.network" \
-  biosky-ingester-rs
+  biosky-ingester
 ```

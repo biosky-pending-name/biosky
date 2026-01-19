@@ -1,11 +1,11 @@
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/biosky-ingester-rs', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/biosky-ingester', '.']
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/biosky-ingester-rs']
+    args: ['push', 'gcr.io/$PROJECT_ID/biosky-ingester']
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -13,9 +13,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'biosky-ingester-rs'
+      - 'biosky-ingester'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/biosky-ingester-rs'
+      - 'gcr.io/$PROJECT_ID/biosky-ingester'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -39,4 +39,4 @@ steps:
       - '--allow-unauthenticated'
 
 images:
-  - 'gcr.io/$PROJECT_ID/biosky-ingester-rs'
+  - 'gcr.io/$PROJECT_ID/biosky-ingester'
