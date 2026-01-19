@@ -159,10 +159,13 @@ export class OAuthService {
     // Skip OAuth initialization in development if it fails
     try {
       await this.initializeClient();
-    } catch (error) {
-      console.error("OAuth initialization failed:", error);
-      console.error("Stack trace:", (error as Error).stack);
-      console.warn("OAuth login will not be available");
+    } catch (error: unknown) {
+      // Avoid console.error with error objects from @atproto - they can crash Node's inspect
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const stack = error instanceof Error ? error.stack : undefined;
+      process.stderr.write(`OAuth initialization failed: ${message}\n`);
+      if (stack) process.stderr.write(`Stack: ${stack}\n`);
+      process.stderr.write("OAuth login will not be available\n");
     }
   }
 
@@ -238,8 +241,13 @@ export class OAuthService {
     };
 
     console.log("Creating NodeOAuthClient with options...");
-    this.client = new NodeOAuthClient(options);
-    console.log("OAuth client created successfully with client_id:", this.clientId);
+    try {
+      this.client = new NodeOAuthClient(options);
+      console.log("OAuth client created successfully with client_id:", this.clientId);
+    } catch (e) {
+      console.error("NodeOAuthClient constructor failed:", String((e as Error)?.message || e));
+      throw e;
+    }
   }
 
   getClientMetadata(): object {
