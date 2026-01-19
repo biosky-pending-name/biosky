@@ -156,7 +156,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "thiserror",
  "tokio",
  "tokio-test",
  "tokio-tungstenite",

@@ -1,33 +1,55 @@
 //! Error types for the BioSky ingester
 
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 #[allow(dead_code)]
 pub enum IngesterError {
-    #[error("WebSocket error: {0}")]
-    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
-
-    #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
-
-    #[error("CBOR decode error: {0}")]
+    WebSocket(tokio_tungstenite::tungstenite::Error),
+    Database(sqlx::Error),
     CborDecode(String),
-
-    #[error("Invalid frame: {0}")]
     InvalidFrame(String),
-
-    #[error("Connection closed")]
     ConnectionClosed,
-
-    #[error("Max reconnection attempts reached")]
     MaxReconnectAttempts,
-
-    #[error("Configuration error: {0}")]
     Config(String),
-
-    #[error("Parse error: {0}")]
     Parse(String),
+}
+
+impl fmt::Display for IngesterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IngesterError::WebSocket(err) => write!(f, "WebSocket error: {}", err),
+            IngesterError::Database(err) => write!(f, "Database error: {}", err),
+            IngesterError::CborDecode(msg) => write!(f, "CBOR decode error: {}", msg),
+            IngesterError::InvalidFrame(msg) => write!(f, "Invalid frame: {}", msg),
+            IngesterError::ConnectionClosed => write!(f, "Connection closed"),
+            IngesterError::MaxReconnectAttempts => write!(f, "Max reconnection attempts reached"),
+            IngesterError::Config(msg) => write!(f, "Configuration error: {}", msg),
+            IngesterError::Parse(msg) => write!(f, "Parse error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for IngesterError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            IngesterError::WebSocket(err) => Some(err),
+            IngesterError::Database(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl From<tokio_tungstenite::tungstenite::Error> for IngesterError {
+    fn from(err: tokio_tungstenite::tungstenite::Error) -> Self {
+        IngesterError::WebSocket(err)
+    }
+}
+
+impl From<sqlx::Error> for IngesterError {
+    fn from(err: sqlx::Error) -> Self {
+        IngesterError::Database(err)
+    }
 }
 
 impl From<ciborium::de::Error<std::io::Error>> for IngesterError {
