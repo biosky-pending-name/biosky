@@ -2,7 +2,7 @@ steps:
   # Build all images in parallel
   - id: 'build-appview'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'Dockerfile.appview', '-t', 'gcr.io/$PROJECT_ID/biosky-appview', '.']
+    args: ['build', '-f', 'packages/biosky-appview/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/biosky-appview', '.']
     waitFor: ['-']
 
   - id: 'build-ingester'
@@ -12,7 +12,7 @@ steps:
 
   - id: 'build-media-proxy'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'Dockerfile.media-proxy', '-t', 'gcr.io/$PROJECT_ID/biosky-media-proxy', '.']
+    args: ['build', '-f', 'packages/biosky-media-proxy/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/biosky-media-proxy', '.']
     waitFor: ['-']
 
   # Push all images in parallel
@@ -57,7 +57,7 @@ steps:
       - '--image=gcr.io/$PROJECT_ID/biosky-ingester'
       - '--region=$_REGION'
       - '--allow-unauthenticated'
-      - '--cpu=4'
+      - '--cpu=1'
       - '--memory=2Gi'
       - '--add-cloudsql-instances=$PROJECT_ID:$_REGION:biosky-db'
       - '--set-env-vars=RUST_LOG=biosky_ingester=info,DB_HOST=/cloudsql/$PROJECT_ID:$_REGION:biosky-db,DB_NAME=biosky,DB_USER=postgres,RELAY_URL=wss://bsky.network'

@@ -164,9 +164,9 @@ Three Cloud Run services deployed via `cloudbuild.yaml`:
 
 | Service | Dockerfile | Public | Cloud SQL | Notes |
 |---------|------------|--------|-----------|-------|
-| biosky-appview | Dockerfile.appview | Yes | Yes | Main API + serves frontend |
-| biosky-ingester | packages/biosky-ingester/Dockerfile | No | Yes | min-instances=1 (always running) |
-| biosky-media-proxy | Dockerfile.media-proxy | Yes | No | Stateless image cache |
+| biosky-appview | packages/biosky-appview/Dockerfile | Yes | Yes | Main API + serves frontend |
+| biosky-ingester | packages/biosky-ingester/Dockerfile | Yes | Yes | min-instances=1 (always running) |
+| biosky-media-proxy | packages/biosky-media-proxy/Dockerfile | Yes | No | Stateless image cache |
 
 Deploy manually:
 ```bash
