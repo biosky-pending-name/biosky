@@ -191,10 +191,8 @@ impl FirehoseSubscription {
     async fn handle_commit(&mut self, body: CborValue) -> Result<()> {
         COMMITS_PROCESSED.fetch_add(1, Ordering::Relaxed);
 
-        let repo = get_cbor_string(&body, "repo").unwrap_or_default();
         let seq = get_cbor_int(&body, "seq").unwrap_or(0);
         let time_str = get_cbor_string(&body, "time").unwrap_or_default();
-        let blocks = get_cbor_bytes(&body, "blocks");
 
         let time = DateTime::parse_from_rfc3339(&time_str)
             .map(|dt| dt.with_timezone(&Utc))
@@ -209,8 +207,30 @@ impl FirehoseSubscription {
             self.last_timing_sent = Instant::now();
         }
 
-        // Parse operations
+        // Parse operations - check collection BEFORE extracting expensive blocks
         let ops = get_cbor_array(&body, "ops").unwrap_or_default();
+
+        // First pass: check if any ops match our collections
+        let mut has_matching_ops = false;
+        for op_value in &ops {
+            let path = get_cbor_string(op_value, "path").unwrap_or_default();
+            if let Some(collection) = path.split('/').next() {
+                if collection == OCCURRENCE_COLLECTION || collection == IDENTIFICATION_COLLECTION {
+                    has_matching_ops = true;
+                    break;
+                }
+            }
+        }
+
+        // Early exit if no matching collections - skip expensive blocks extraction
+        if !has_matching_ops {
+            self.cursor = Some(seq);
+            return Ok(());
+        }
+
+        // Only extract blocks and repo if we have matching ops
+        let repo = get_cbor_string(&body, "repo").unwrap_or_default();
+        let blocks = get_cbor_bytes(&body, "blocks");
 
         for op_value in ops {
             let action_str = get_cbor_string(&op_value, "action").unwrap_or_default();
