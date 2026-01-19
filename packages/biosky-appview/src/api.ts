@@ -529,7 +529,7 @@ export class AppViewServer {
           lifeStage: row.life_stage || undefined,
           behavior: row.behavior || undefined,
           images: (
-            row.associated_media as Array<{ image: { ref: string } }>
+            (row.associated_media || []) as Array<{ image: { ref: string } }>
           ).map((b) => `/media/blob/${row.did}/${b.image?.ref || ""}`),
           createdAt: row.created_at.toISOString(),
         };
