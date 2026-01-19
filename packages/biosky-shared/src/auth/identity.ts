@@ -52,7 +52,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 export class IdentityResolver {
   private agent: AtpAgent;
 
-  constructor(serviceUrl = "https://bsky.social") {
+  constructor(serviceUrl = "https://public.api.bsky.app") {
     this.agent = new AtpAgent({ service: serviceUrl });
   }
 
