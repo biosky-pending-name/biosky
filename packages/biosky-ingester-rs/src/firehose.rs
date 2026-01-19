@@ -505,10 +505,56 @@ mod tests {
     }
 
     #[test]
+    fn test_build_url_custom_relay() {
+        let (tx, _rx) = mpsc::channel(10);
+        let config = FirehoseConfig {
+            relay: "wss://custom.relay.example".to_string(),
+            cursor: None,
+        };
+        let sub = FirehoseSubscription::new(config, tx);
+        let url = sub.build_url();
+        assert_eq!(
+            url,
+            "wss://custom.relay.example/xrpc/com.atproto.sync.subscribeRepos"
+        );
+    }
+
+    #[test]
+    fn test_firehose_config_default() {
+        let config = FirehoseConfig::default();
+        assert_eq!(config.relay, "wss://bsky.network");
+        assert!(config.cursor.is_none());
+    }
+
+    #[test]
+    fn test_get_cursor() {
+        let (tx, _rx) = mpsc::channel(10);
+        let config = FirehoseConfig {
+            cursor: Some(999),
+            ..Default::default()
+        };
+        let sub = FirehoseSubscription::new(config, tx);
+        assert_eq!(sub.get_cursor(), Some(999));
+    }
+
+    #[test]
     fn test_base32_encode() {
         // Simple test
         let encoded = base32_encode(&[0x01, 0x71]);
         assert!(encoded.starts_with('b'));
+    }
+
+    #[test]
+    fn test_base32_encode_empty() {
+        let encoded = base32_encode(&[]);
+        assert_eq!(encoded, "b");
+    }
+
+    #[test]
+    fn test_base32_encode_single_byte() {
+        let encoded = base32_encode(&[0xff]);
+        assert!(encoded.starts_with('b'));
+        assert!(encoded.len() > 1);
     }
 
     #[test]
@@ -517,5 +563,294 @@ mod tests {
         assert_eq!(base64_encode(b"a"), "YQ==");
         assert_eq!(base64_encode(b"ab"), "YWI=");
         assert_eq!(base64_encode(b"abc"), "YWJj");
+    }
+
+    #[test]
+    fn test_base64_encode_empty() {
+        assert_eq!(base64_encode(&[]), "");
+    }
+
+    #[test]
+    fn test_base64_encode_binary() {
+        // Test with binary data (all possible byte values in small range)
+        let data: Vec<u8> = (0..=255u8).take(6).collect();
+        let encoded = base64_encode(&data);
+        assert!(!encoded.is_empty());
+        // Should only contain valid base64 characters
+        assert!(encoded.chars().all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '='));
+    }
+
+    #[test]
+    fn test_get_cbor_string_from_map() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("key1".to_string()), CborValue::Text("value1".to_string())),
+            (CborValue::Text("key2".to_string()), CborValue::Text("value2".to_string())),
+        ]);
+
+        assert_eq!(get_cbor_string(&map, "key1"), Some("value1".to_string()));
+        assert_eq!(get_cbor_string(&map, "key2"), Some("value2".to_string()));
+        assert_eq!(get_cbor_string(&map, "nonexistent"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_string_wrong_type() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("number".to_string()), CborValue::Integer(42.into())),
+        ]);
+
+        assert_eq!(get_cbor_string(&map, "number"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_string_non_map() {
+        let array = CborValue::Array(vec![CborValue::Text("item".to_string())]);
+        assert_eq!(get_cbor_string(&array, "key"), None);
+
+        let text = CborValue::Text("just a string".to_string());
+        assert_eq!(get_cbor_string(&text, "key"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_int_from_map() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("seq".to_string()), CborValue::Integer(12345.into())),
+            (CborValue::Text("negative".to_string()), CborValue::Integer((-100).into())),
+        ]);
+
+        assert_eq!(get_cbor_int(&map, "seq"), Some(12345));
+        assert_eq!(get_cbor_int(&map, "negative"), Some(-100));
+        assert_eq!(get_cbor_int(&map, "nonexistent"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_int_wrong_type() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("string".to_string()), CborValue::Text("not a number".to_string())),
+        ]);
+
+        assert_eq!(get_cbor_int(&map, "string"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_int_non_map() {
+        let int = CborValue::Integer(42.into());
+        assert_eq!(get_cbor_int(&int, "key"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_bytes_from_map() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("data".to_string()), CborValue::Bytes(vec![1, 2, 3, 4])),
+        ]);
+
+        assert_eq!(get_cbor_bytes(&map, "data"), Some(vec![1, 2, 3, 4]));
+        assert_eq!(get_cbor_bytes(&map, "nonexistent"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_bytes_wrong_type() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("text".to_string()), CborValue::Text("not bytes".to_string())),
+        ]);
+
+        assert_eq!(get_cbor_bytes(&map, "text"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_array_from_map() {
+        let inner_array = vec![
+            CborValue::Text("item1".to_string()),
+            CborValue::Text("item2".to_string()),
+        ];
+        let map = CborValue::Map(vec![
+            (CborValue::Text("ops".to_string()), CborValue::Array(inner_array.clone())),
+        ]);
+
+        let result = get_cbor_array(&map, "ops");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().len(), 2);
+        assert_eq!(get_cbor_array(&map, "nonexistent"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_array_wrong_type() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("text".to_string()), CborValue::Text("not an array".to_string())),
+        ]);
+
+        assert_eq!(get_cbor_array(&map, "text"), None);
+    }
+
+    #[test]
+    fn test_cbor_to_json_null() {
+        let result = cbor_to_json(&CborValue::Null);
+        assert_eq!(result, Some(serde_json::Value::Null));
+    }
+
+    #[test]
+    fn test_cbor_to_json_bool() {
+        assert_eq!(cbor_to_json(&CborValue::Bool(true)), Some(serde_json::json!(true)));
+        assert_eq!(cbor_to_json(&CborValue::Bool(false)), Some(serde_json::json!(false)));
+    }
+
+    #[test]
+    fn test_cbor_to_json_integer() {
+        assert_eq!(cbor_to_json(&CborValue::Integer(42.into())), Some(serde_json::json!(42)));
+        assert_eq!(cbor_to_json(&CborValue::Integer((-100).into())), Some(serde_json::json!(-100)));
+    }
+
+    #[test]
+    fn test_cbor_to_json_float() {
+        let result = cbor_to_json(&CborValue::Float(3.14));
+        assert!(result.is_some());
+        let val = result.unwrap();
+        assert!(val.is_f64());
+    }
+
+    #[test]
+    fn test_cbor_to_json_text() {
+        let result = cbor_to_json(&CborValue::Text("hello".to_string()));
+        assert_eq!(result, Some(serde_json::json!("hello")));
+    }
+
+    #[test]
+    fn test_cbor_to_json_bytes() {
+        let result = cbor_to_json(&CborValue::Bytes(vec![1, 2, 3]));
+        assert!(result.is_some());
+        // Bytes should be base64 encoded
+        assert!(result.unwrap().is_string());
+    }
+
+    #[test]
+    fn test_cbor_to_json_array() {
+        let cbor_array = CborValue::Array(vec![
+            CborValue::Integer(1.into()),
+            CborValue::Integer(2.into()),
+            CborValue::Integer(3.into()),
+        ]);
+        let result = cbor_to_json(&cbor_array);
+        assert_eq!(result, Some(serde_json::json!([1, 2, 3])));
+    }
+
+    #[test]
+    fn test_cbor_to_json_map() {
+        let cbor_map = CborValue::Map(vec![
+            (CborValue::Text("name".to_string()), CborValue::Text("test".to_string())),
+            (CborValue::Text("count".to_string()), CborValue::Integer(5.into())),
+        ]);
+        let result = cbor_to_json(&cbor_map);
+        assert!(result.is_some());
+        let json = result.unwrap();
+        assert_eq!(json["name"], "test");
+        assert_eq!(json["count"], 5);
+    }
+
+    #[test]
+    fn test_cbor_to_json_nested() {
+        let nested = CborValue::Map(vec![
+            (CborValue::Text("outer".to_string()), CborValue::Map(vec![
+                (CborValue::Text("inner".to_string()), CborValue::Text("value".to_string())),
+            ])),
+        ]);
+        let result = cbor_to_json(&nested);
+        assert!(result.is_some());
+        let json = result.unwrap();
+        assert_eq!(json["outer"]["inner"], "value");
+    }
+
+    #[test]
+    fn test_cbor_to_json_tagged() {
+        // Tagged values should unwrap to their inner value
+        let tagged = CborValue::Tag(42, Box::new(CborValue::Text("tagged content".to_string())));
+        let result = cbor_to_json(&tagged);
+        assert_eq!(result, Some(serde_json::json!("tagged content")));
+    }
+
+    #[test]
+    fn test_decode_frame_valid() {
+        // Create a simple valid frame with header and body
+        let mut frame_data = Vec::new();
+
+        // Encode header as CBOR map
+        let header = CborValue::Map(vec![
+            (CborValue::Text("op".to_string()), CborValue::Integer(1.into())),
+            (CborValue::Text("t".to_string()), CborValue::Text("#commit".to_string())),
+        ]);
+        ciborium::into_writer(&header, &mut frame_data).unwrap();
+
+        // Encode body as CBOR map
+        let body = CborValue::Map(vec![
+            (CborValue::Text("repo".to_string()), CborValue::Text("did:plc:test".to_string())),
+            (CborValue::Text("seq".to_string()), CborValue::Integer(100.into())),
+        ]);
+        ciborium::into_writer(&body, &mut frame_data).unwrap();
+
+        let result = decode_frame(&frame_data);
+        assert!(result.is_ok());
+
+        let (decoded_header, decoded_body) = result.unwrap();
+        assert_eq!(get_cbor_int(&decoded_header, "op"), Some(1));
+        assert_eq!(get_cbor_string(&decoded_header, "t"), Some("#commit".to_string()));
+        assert_eq!(get_cbor_string(&decoded_body, "repo"), Some("did:plc:test".to_string()));
+        assert_eq!(get_cbor_int(&decoded_body, "seq"), Some(100));
+    }
+
+    #[test]
+    fn test_decode_frame_invalid() {
+        // Invalid CBOR data
+        let invalid_data = vec![0xff, 0xff, 0xff];
+        let result = decode_frame(&invalid_data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_frame_empty() {
+        let result = decode_frame(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_cbor_cid_tagged() {
+        // CID with tag 42 and bytes (skipping first byte for multibase prefix)
+        let cid_bytes = vec![0x00, 0x01, 0x71, 0x12, 0x20]; // multibase prefix + some CID bytes
+        let map = CborValue::Map(vec![
+            (CborValue::Text("cid".to_string()), CborValue::Tag(42, Box::new(CborValue::Bytes(cid_bytes)))),
+        ]);
+
+        let result = get_cbor_cid(&map, "cid");
+        assert!(result.is_some());
+        assert!(result.unwrap().starts_with('b')); // base32 CID prefix
+    }
+
+    #[test]
+    fn test_get_cbor_cid_raw_bytes() {
+        // CID as raw bytes (no tag)
+        let cid_bytes = vec![0x00, 0x01, 0x71, 0x12, 0x20];
+        let map = CborValue::Map(vec![
+            (CborValue::Text("cid".to_string()), CborValue::Bytes(cid_bytes)),
+        ]);
+
+        let result = get_cbor_cid(&map, "cid");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_get_cbor_cid_missing() {
+        let map = CborValue::Map(vec![
+            (CborValue::Text("other".to_string()), CborValue::Text("value".to_string())),
+        ]);
+
+        assert_eq!(get_cbor_cid(&map, "cid"), None);
+    }
+
+    #[test]
+    fn test_get_cbor_cid_too_short() {
+        // CID bytes too short (only 1 byte)
+        let cid_bytes = vec![0x00];
+        let map = CborValue::Map(vec![
+            (CborValue::Text("cid".to_string()), CborValue::Tag(42, Box::new(CborValue::Bytes(cid_bytes)))),
+        ]);
+
+        assert_eq!(get_cbor_cid(&map, "cid"), None);
     }
 }

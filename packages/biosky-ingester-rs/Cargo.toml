@@ -43,6 +43,7 @@ url = "2"
 
 [dev-dependencies]
 tokio-test = "0.4"
+tower = { version = "0.5", features = ["util"] }
 
 [[bin]]
 name = "biosky-ingester"

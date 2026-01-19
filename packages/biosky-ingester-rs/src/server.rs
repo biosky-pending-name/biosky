@@ -126,6 +126,268 @@ async fn dashboard() -> Html<&'static str> {
     Html(DASHBOARD_HTML)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[test]
+    fn test_server_state_new() {
+        let state = ServerState::new();
+        assert!(!state.connected);
+        assert!(state.cursor.is_none());
+        assert_eq!(state.stats.occurrences, 0);
+        assert_eq!(state.stats.identifications, 0);
+        assert_eq!(state.stats.errors, 0);
+        assert!(state.recent_events.is_empty());
+        assert!(state.last_processed.is_none());
+    }
+
+    #[test]
+    fn test_server_state_default() {
+        let state = ServerState::default();
+        assert!(!state.connected);
+        assert!(state.cursor.is_none());
+    }
+
+    #[test]
+    fn test_add_recent_event() {
+        let mut state = ServerState::new();
+
+        // Add a single event
+        state.add_recent_event(RecentEvent {
+            event_type: "occurrence".to_string(),
+            action: "create".to_string(),
+            uri: "at://test/1".to_string(),
+            time: Utc::now(),
+        });
+
+        assert_eq!(state.recent_events.len(), 1);
+        assert_eq!(state.recent_events[0].event_type, "occurrence");
+    }
+
+    #[test]
+    fn test_add_recent_event_prepends() {
+        let mut state = ServerState::new();
+
+        state.add_recent_event(RecentEvent {
+            event_type: "occurrence".to_string(),
+            action: "create".to_string(),
+            uri: "at://test/first".to_string(),
+            time: Utc::now(),
+        });
+
+        state.add_recent_event(RecentEvent {
+            event_type: "identification".to_string(),
+            action: "create".to_string(),
+            uri: "at://test/second".to_string(),
+            time: Utc::now(),
+        });
+
+        assert_eq!(state.recent_events.len(), 2);
+        // Most recent should be first
+        assert_eq!(state.recent_events[0].event_type, "identification");
+        assert_eq!(state.recent_events[1].event_type, "occurrence");
+    }
+
+    #[test]
+    fn test_add_recent_event_limits_to_10() {
+        let mut state = ServerState::new();
+
+        // Add 15 events
+        for i in 0..15 {
+            state.add_recent_event(RecentEvent {
+                event_type: "occurrence".to_string(),
+                action: "create".to_string(),
+                uri: format!("at://test/{}", i),
+                time: Utc::now(),
+            });
+        }
+
+        // Should only keep 10
+        assert_eq!(state.recent_events.len(), 10);
+        // Most recent (14) should be first
+        assert_eq!(state.recent_events[0].uri, "at://test/14");
+        // Oldest kept (5) should be last
+        assert_eq!(state.recent_events[9].uri, "at://test/5");
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["status"], "ok");
+        assert_eq!(json["connected"], false);
+        assert!(json["cursor"].is_null());
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint_when_connected() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        {
+            let mut s = state.write().await;
+            s.connected = true;
+            s.cursor = Some(12345);
+        }
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["status"], "ok");
+        assert_eq!(json["connected"], true);
+        assert_eq!(json["cursor"], 12345);
+    }
+
+    #[tokio::test]
+    async fn test_stats_endpoint() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        {
+            let mut s = state.write().await;
+            s.connected = true;
+            s.cursor = Some(99999);
+            s.stats.occurrences = 42;
+            s.stats.identifications = 7;
+            s.stats.errors = 1;
+        }
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/api/stats")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["connected"], true);
+        assert_eq!(json["cursor"], 99999);
+        assert_eq!(json["stats"]["occurrences"], 42);
+        assert_eq!(json["stats"]["identifications"], 7);
+        assert_eq!(json["stats"]["errors"], 1);
+        assert!(json["uptime"].as_i64().unwrap() >= 0);
+    }
+
+    #[tokio::test]
+    async fn test_dashboard_endpoint() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let html = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("BioSky Ingester"));
+    }
+
+    #[tokio::test]
+    async fn test_stats_with_recent_events() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        {
+            let mut s = state.write().await;
+            s.add_recent_event(RecentEvent {
+                event_type: "occurrence".to_string(),
+                action: "create".to_string(),
+                uri: "at://test/event1".to_string(),
+                time: Utc::now(),
+            });
+        }
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/api/stats")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["recentEvents"].as_array().unwrap().len(), 1);
+        assert_eq!(json["recentEvents"][0]["type"], "occurrence");
+        assert_eq!(json["recentEvents"][0]["action"], "create");
+    }
+
+    #[tokio::test]
+    async fn test_stats_with_last_processed() {
+        let state: SharedState = Arc::new(RwLock::new(ServerState::new()));
+        {
+            let mut s = state.write().await;
+            s.last_processed = Some(CommitTimingInfo {
+                seq: 555,
+                time: Utc::now(),
+            });
+        }
+        let router = create_router(state);
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .uri("/api/stats")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["lastProcessed"]["seq"], 555);
+        assert!(json["lastProcessed"]["time"].is_string());
+    }
+}
+
 const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
