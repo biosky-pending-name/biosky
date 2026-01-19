@@ -126,6 +126,95 @@ async fn dashboard() -> Html<&'static str> {
     Html(DASHBOARD_HTML)
 }
 
+const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioSky Ingester</title>
+  <style>
+    body { font-family: monospace; padding: 1rem; }
+    table { border-collapse: collapse; margin-bottom: 1rem; }
+    td, th { text-align: left; padding: 0.25rem 1rem 0.25rem 0; }
+    .connected { color: green; }
+    .disconnected { color: red; }
+    h2 { margin-top: 1rem; }
+    .event { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <h1>BioSky Ingester</h1>
+
+  <table>
+    <tr><td>Status</td><td id="status">Loading...</td></tr>
+    <tr><td>Cursor</td><td id="cursor">-</td></tr>
+    <tr><td>Uptime</td><td id="uptime">-</td></tr>
+    <tr><td>Lag</td><td id="lag">-</td></tr>
+  </table>
+
+  <h2>Stats</h2>
+  <table>
+    <tr><td>Occurrences</td><td id="occurrences">0</td></tr>
+    <tr><td>Identifications</td><td id="identifications">0</td></tr>
+    <tr><td>Errors</td><td id="errors">0</td></tr>
+  </table>
+
+  <h2>Recent Events</h2>
+  <div id="events">No events yet...</div>
+
+  <script>
+    function formatDuration(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+      if (m > 0) return m + 'm ' + s + 's';
+      return s + 's';
+    }
+
+    function formatLag(lastProcessed) {
+      if (!lastProcessed || !lastProcessed.time) return '-';
+      const lagMs = Date.now() - new Date(lastProcessed.time).getTime();
+      if (lagMs < 0) return '0s';
+      return formatDuration(Math.floor(lagMs / 1000));
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = data.connected ? 'Connected' : 'Disconnected';
+        statusEl.className = data.connected ? 'connected' : 'disconnected';
+
+        document.getElementById('cursor').textContent = data.cursor?.toLocaleString() || '-';
+        document.getElementById('uptime').textContent = formatDuration(data.uptime);
+        document.getElementById('lag').textContent = formatLag(data.lastProcessed);
+        document.getElementById('occurrences').textContent = data.stats.occurrences.toLocaleString();
+        document.getElementById('identifications').textContent = data.stats.identifications.toLocaleString();
+        document.getElementById('errors').textContent = data.stats.errors.toLocaleString();
+
+        const eventsEl = document.getElementById('events');
+        if (data.recentEvents.length === 0) {
+          eventsEl.textContent = 'No events yet...';
+        } else {
+          eventsEl.innerHTML = data.recentEvents.map(e =>
+            '<div class="event">' + new Date(e.time).toLocaleTimeString() + ' [' + e.type + '] ' + e.action + ' ' + e.uri + '</div>'
+          ).join('');
+        }
+      } catch (err) {
+        document.getElementById('status').textContent = 'Error';
+        document.getElementById('status').className = 'disconnected';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,92 +476,3 @@ mod tests {
         assert!(json["lastProcessed"]["time"].is_string());
     }
 }
-
-const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BioSky Ingester</title>
-  <style>
-    body { font-family: monospace; padding: 1rem; }
-    table { border-collapse: collapse; margin-bottom: 1rem; }
-    td, th { text-align: left; padding: 0.25rem 1rem 0.25rem 0; }
-    .connected { color: green; }
-    .disconnected { color: red; }
-    h2 { margin-top: 1rem; }
-    .event { margin: 0.25rem 0; }
-  </style>
-</head>
-<body>
-  <h1>BioSky Ingester</h1>
-
-  <table>
-    <tr><td>Status</td><td id="status">Loading...</td></tr>
-    <tr><td>Cursor</td><td id="cursor">-</td></tr>
-    <tr><td>Uptime</td><td id="uptime">-</td></tr>
-    <tr><td>Lag</td><td id="lag">-</td></tr>
-  </table>
-
-  <h2>Stats</h2>
-  <table>
-    <tr><td>Occurrences</td><td id="occurrences">0</td></tr>
-    <tr><td>Identifications</td><td id="identifications">0</td></tr>
-    <tr><td>Errors</td><td id="errors">0</td></tr>
-  </table>
-
-  <h2>Recent Events</h2>
-  <div id="events">No events yet...</div>
-
-  <script>
-    function formatDuration(seconds) {
-      const h = Math.floor(seconds / 3600);
-      const m = Math.floor((seconds % 3600) / 60);
-      const s = seconds % 60;
-      if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
-      if (m > 0) return m + 'm ' + s + 's';
-      return s + 's';
-    }
-
-    function formatLag(lastProcessed) {
-      if (!lastProcessed || !lastProcessed.time) return '-';
-      const lagMs = Date.now() - new Date(lastProcessed.time).getTime();
-      if (lagMs < 0) return '0s';
-      return formatDuration(Math.floor(lagMs / 1000));
-    }
-
-    async function refresh() {
-      try {
-        const res = await fetch('/api/stats');
-        const data = await res.json();
-
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = data.connected ? 'Connected' : 'Disconnected';
-        statusEl.className = data.connected ? 'connected' : 'disconnected';
-
-        document.getElementById('cursor').textContent = data.cursor?.toLocaleString() || '-';
-        document.getElementById('uptime').textContent = formatDuration(data.uptime);
-        document.getElementById('lag').textContent = formatLag(data.lastProcessed);
-        document.getElementById('occurrences').textContent = data.stats.occurrences.toLocaleString();
-        document.getElementById('identifications').textContent = data.stats.identifications.toLocaleString();
-        document.getElementById('errors').textContent = data.stats.errors.toLocaleString();
-
-        const eventsEl = document.getElementById('events');
-        if (data.recentEvents.length === 0) {
-          eventsEl.textContent = 'No events yet...';
-        } else {
-          eventsEl.innerHTML = data.recentEvents.map(e =>
-            '<div class="event">' + new Date(e.time).toLocaleTimeString() + ' [' + e.type + '] ' + e.action + ' ' + e.uri + '</div>'
-          ).join('');
-        }
-      } catch (err) {
-        document.getElementById('status').textContent = 'Error';
-        document.getElementById('status').className = 'disconnected';
-      }
-    }
-
-    refresh();
-    setInterval(refresh, 2000);
-  </script>
-</body>
-</html>"#;

@@ -748,7 +748,7 @@ mod tests {
 
     #[test]
     fn test_cbor_to_json_float() {
-        let result = cbor_to_json(&CborValue::Float(3.14));
+        let result = cbor_to_json(&CborValue::Float(1.5));
         assert!(result.is_some());
         let val = result.unwrap();
         assert!(val.is_f64());
