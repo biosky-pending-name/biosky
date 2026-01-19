@@ -1,34 +1,45 @@
-//! Firehose WebSocket client for AT Protocol
+//! Jetstream WebSocket client for AT Protocol
 //!
-//! Connects to an AT Protocol relay and streams commit events.
+//! Connects to Bluesky's Jetstream service which provides filtered firehose access.
+//! Unlike the raw firehose, Jetstream filters server-side and sends JSON.
 
 use crate::error::{IngesterError, Result};
 use crate::types::{
     CommitTimingInfo, IdentificationEvent, OccurrenceEvent, IDENTIFICATION_COLLECTION,
     OCCURRENCE_COLLECTION,
 };
-use atrium_api::com::atproto::sync::subscribe_repos::Commit;
-use atrium_repo::blockstore::{AsyncBlockStoreRead, CarStore};
-use chrono::{DateTime, Utc};
-use ciborium::Value as CborValue;
+use chrono::{TimeZone, Utc};
 use futures_util::StreamExt;
-use std::io::Cursor;
-use std::sync::atomic::{AtomicU64, Ordering};
+use serde::Deserialize;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
 
 const TIMING_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
-const STATS_LOG_INTERVAL: Duration = Duration::from_secs(10);
 
-/// Diagnostic counters for throughput monitoring
-static MESSAGES_RECEIVED: AtomicU64 = AtomicU64::new(0);
-static COMMITS_PROCESSED: AtomicU64 = AtomicU64::new(0);
-
-const DEFAULT_RELAY: &str = "wss://bsky.network";
+const DEFAULT_JETSTREAM: &str = "wss://jetstream2.us-east.bsky.network/subscribe";
 const MAX_RECONNECT_ATTEMPTS: u32 = 10;
 const INITIAL_RECONNECT_DELAY: Duration = Duration::from_secs(1);
+
+/// Jetstream event structure
+#[derive(Debug, Deserialize)]
+struct JetstreamEvent {
+    did: String,
+    time_us: i64,
+    commit: Option<JetstreamCommit>,
+}
+
+#[derive(Debug, Deserialize)]
+struct JetstreamCommit {
+    #[allow(dead_code)]
+    rev: String,
+    operation: String,
+    collection: String,
+    rkey: String,
+    record: Option<serde_json::Value>,
+    cid: Option<String>,
+}
 
 /// Events emitted by the firehose subscription
 #[derive(Debug)]
@@ -50,13 +61,13 @@ pub struct FirehoseConfig {
 impl Default for FirehoseConfig {
     fn default() -> Self {
         Self {
-            relay: DEFAULT_RELAY.to_string(),
+            relay: DEFAULT_JETSTREAM.to_string(),
             cursor: None,
         }
     }
 }
 
-/// Firehose subscription that connects to the AT Protocol relay
+/// Firehose subscription that connects to Jetstream
 pub struct FirehoseSubscription {
     config: FirehoseConfig,
     event_tx: mpsc::Sender<FirehoseEvent>,
@@ -84,12 +95,11 @@ impl FirehoseSubscription {
         loop {
             match self.connect_and_stream().await {
                 Ok(()) => {
-                    // Clean disconnect
-                    info!("Firehose connection closed cleanly");
+                    info!("Jetstream connection closed cleanly");
                     break;
                 }
                 Err(e) => {
-                    error!("Firehose error: {}", e);
+                    error!("Jetstream error: {}", e);
                     let _ = self.event_tx.send(FirehoseEvent::Error(e.to_string())).await;
 
                     reconnect_attempts += 1;
@@ -112,37 +122,18 @@ impl FirehoseSubscription {
 
     async fn connect_and_stream(&mut self) -> Result<()> {
         let url = self.build_url();
-        info!("Connecting to firehose: {}", url);
+        info!("Connecting to Jetstream: {}", url);
 
         let (ws_stream, _) = connect_async(&url).await?;
         let (mut _write, mut read) = ws_stream.split();
 
         let _ = self.event_tx.send(FirehoseEvent::Connected).await;
-        info!("Firehose connection established");
-
-        // Reset diagnostic counters
-        MESSAGES_RECEIVED.store(0, Ordering::Relaxed);
-        COMMITS_PROCESSED.store(0, Ordering::Relaxed);
-        let mut last_stats_log = Instant::now();
+        info!("Jetstream connection established");
 
         while let Some(msg) = read.next().await {
-            // Log throughput stats periodically
-            if last_stats_log.elapsed() >= STATS_LOG_INTERVAL {
-                let msgs = MESSAGES_RECEIVED.swap(0, Ordering::Relaxed);
-                let commits = COMMITS_PROCESSED.swap(0, Ordering::Relaxed);
-                let elapsed = last_stats_log.elapsed().as_secs_f64();
-                info!(
-                    "Throughput: {:.1} msgs/sec, {:.1} commits/sec",
-                    msgs as f64 / elapsed,
-                    commits as f64 / elapsed
-                );
-                last_stats_log = Instant::now();
-            }
-
             match msg {
-                Ok(Message::Binary(data)) => {
-                    MESSAGES_RECEIVED.fetch_add(1, Ordering::Relaxed);
-                    if let Err(e) = self.handle_message(&data).await {
+                Ok(Message::Text(text)) => {
+                    if let Err(e) = self.handle_message(&text).await {
                         debug!("Error processing message: {}", e);
                     }
                 }
@@ -152,7 +143,7 @@ impl FirehoseSubscription {
                     break;
                 }
                 Ok(_) => {
-                    // Ignore text, ping, pong messages
+                    // Ignore binary, ping, pong messages
                 }
                 Err(e) => {
                     error!("WebSocket error: {}", e);
@@ -166,114 +157,75 @@ impl FirehoseSubscription {
     }
 
     fn build_url(&self) -> String {
-        let base = format!(
-            "{}/xrpc/com.atproto.sync.subscribeRepos",
-            self.config.relay
+        let mut url = self.config.relay.clone();
+
+        // Add collection filters
+        let separator = if url.contains('?') { '&' } else { '?' };
+        url = format!(
+            "{}{}wantedCollections={}&wantedCollections={}",
+            url, separator, OCCURRENCE_COLLECTION, IDENTIFICATION_COLLECTION
         );
-        match self.cursor {
-            Some(cursor) => format!("{}?cursor={}", base, cursor),
-            None => base,
-        }
-    }
 
-    async fn handle_message(&mut self, data: &[u8]) -> Result<()> {
-        let (header, body_bytes) = decode_frame(data)?;
-
-        // Check if this is a commit message
-        let op = get_cbor_int(&header, "op").unwrap_or(0);
-        let t = get_cbor_string(&header, "t").unwrap_or_default();
-
-        if op == 1 && t == "#commit" {
-            // Deserialize body into atrium Commit type
-            let commit: Commit = serde_ipld_dagcbor::from_slice(&body_bytes)
-                .map_err(|e| IngesterError::CborDecode(e.to_string()))?;
-            self.handle_commit(commit).await?;
+        // Add cursor if available (Jetstream uses microseconds)
+        if let Some(cursor) = self.cursor {
+            url = format!("{}&cursor={}", url, cursor);
         }
 
-        Ok(())
+        url
     }
 
-    async fn handle_commit(&mut self, commit: Commit) -> Result<()> {
-        COMMITS_PROCESSED.fetch_add(1, Ordering::Relaxed);
+    async fn handle_message(&mut self, text: &str) -> Result<()> {
+        let event: JetstreamEvent = serde_json::from_str(text)
+            .map_err(|e| IngesterError::CborDecode(format!("JSON parse error: {}", e)))?;
 
-        let seq = commit.seq;
-        let time = parse_datetime(&commit.time);
+        let time = Utc.timestamp_micros(event.time_us).single().unwrap_or_else(Utc::now);
+        let seq = event.time_us; // Jetstream uses time_us as cursor
 
-        // Store timing info locally, only send periodically to reduce overhead
+        // Update timing info periodically
         self.last_timing = Some(CommitTimingInfo { seq, time });
         if self.last_timing_sent.elapsed() >= TIMING_UPDATE_INTERVAL {
             if let Some(ref timing) = self.last_timing {
-                let _ = self
-                    .event_tx
-                    .send(FirehoseEvent::Commit(timing.clone()))
-                    .await;
+                let _ = self.event_tx.send(FirehoseEvent::Commit(timing.clone())).await;
             }
             self.last_timing_sent = Instant::now();
         }
 
-        // First pass: check if any ops match our collections
-        let has_matching_ops = commit.ops.iter().any(|op| {
-            op.path
-                .split('/')
-                .next()
-                .is_some_and(|c| c == OCCURRENCE_COLLECTION || c == IDENTIFICATION_COLLECTION)
-        });
-
-        // Early exit if no matching collections - skip expensive blocks extraction
-        if !has_matching_ops {
-            self.cursor = Some(seq);
-            return Ok(());
-        }
-
-        let repo = commit.repo.as_str();
-
-        // Open CAR store for block lookups
-        let mut car_store = CarStore::open(Cursor::new(&commit.blocks)).await.ok();
-
-        for op in &commit.ops {
-            // Split path into collection and rkey
-            let parts: Vec<&str> = op.path.splitn(2, '/').collect();
-            if parts.len() != 2 {
-                continue;
-            }
-            let collection = parts[0];
-            let rkey = parts[1];
-
-            let cid_str = op.cid.as_ref().map(|c| c.0.to_string()).unwrap_or_default();
+        // Process commit if present
+        if let Some(commit) = event.commit {
+            let did = &event.did;
+            let collection = &commit.collection;
+            let rkey = &commit.rkey;
+            let uri = format!("at://{}/{}/{}", did, collection, rkey);
+            let cid = commit.cid.unwrap_or_default();
 
             if collection == OCCURRENCE_COLLECTION {
-                let record = extract_record_from_car(&mut car_store, &op.cid).await;
-                let event = OccurrenceEvent {
-                    did: repo.to_string(),
-                    uri: format!("at://{}/{}/{}", repo, collection, rkey),
-                    cid: cid_str.clone(),
-                    action: op.action.clone(),
+                let occ_event = OccurrenceEvent {
+                    did: did.to_string(),
+                    uri: uri.clone(),
+                    cid,
+                    action: commit.operation.clone(),
                     seq,
                     time,
-                    record,
+                    record: commit.record,
                 };
-                debug!("[Occurrence] {}: {}", event.action, event.uri);
-                let _ = self.event_tx.send(FirehoseEvent::Occurrence(event)).await;
+                debug!("[Occurrence] {}: {}", occ_event.action, occ_event.uri);
+                let _ = self.event_tx.send(FirehoseEvent::Occurrence(occ_event)).await;
             } else if collection == IDENTIFICATION_COLLECTION {
-                let record = extract_record_from_car(&mut car_store, &op.cid).await;
-                let event = IdentificationEvent {
-                    did: repo.to_string(),
-                    uri: format!("at://{}/{}/{}", repo, collection, rkey),
-                    cid: cid_str,
-                    action: op.action.clone(),
+                let id_event = IdentificationEvent {
+                    did: did.to_string(),
+                    uri: uri.clone(),
+                    cid,
+                    action: commit.operation.clone(),
                     seq,
                     time,
-                    record,
+                    record: commit.record,
                 };
-                debug!("[Identification] {}: {}", event.action, event.uri);
-                let _ = self
-                    .event_tx
-                    .send(FirehoseEvent::Identification(event))
-                    .await;
+                debug!("[Identification] {}: {}", id_event.action, id_event.uri);
+                let _ = self.event_tx.send(FirehoseEvent::Identification(id_event)).await;
             }
         }
 
-        // Update cursor for resumption
+        // Update cursor
         self.cursor = Some(seq);
 
         Ok(())
@@ -285,140 +237,6 @@ impl FirehoseSubscription {
     }
 }
 
-/// Parse an atrium Datetime to chrono DateTime<Utc>
-fn parse_datetime(dt: &atrium_api::types::string::Datetime) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(dt.as_str())
-        .map(|d| d.with_timezone(&Utc))
-        .unwrap_or_else(|_| Utc::now())
-}
-
-/// Extract a record from CAR blocks using atrium-repo
-async fn extract_record_from_car(
-    car_store: &mut Option<CarStore<Cursor<&Vec<u8>>>>,
-    cid: &Option<atrium_api::types::CidLink>,
-) -> Option<serde_json::Value> {
-    let store = car_store.as_mut()?;
-    let cid = cid.as_ref()?;
-
-    // Read the block by CID
-    let block_data = store.read_block(cid.0).await.ok()?;
-
-    // Decode the CBOR block to IPLD then to JSON
-    let ipld: ipld_core::ipld::Ipld = serde_ipld_dagcbor::from_slice(&block_data).ok()?;
-    ipld_to_json(&ipld)
-}
-
-/// Convert IPLD to JSON
-fn ipld_to_json(ipld: &ipld_core::ipld::Ipld) -> Option<serde_json::Value> {
-    use ipld_core::ipld::Ipld;
-
-    match ipld {
-        Ipld::Null => Some(serde_json::Value::Null),
-        Ipld::Bool(b) => Some(serde_json::Value::Bool(*b)),
-        Ipld::Integer(i) => Some(serde_json::Value::Number((*i as i64).into())),
-        Ipld::Float(f) => serde_json::Number::from_f64(*f).map(serde_json::Value::Number),
-        Ipld::String(s) => Some(serde_json::Value::String(s.clone())),
-        Ipld::Bytes(b) => Some(serde_json::Value::String(base64_encode(b))),
-        Ipld::List(arr) => {
-            let json_arr: Vec<_> = arr.iter().filter_map(ipld_to_json).collect();
-            Some(serde_json::Value::Array(json_arr))
-        }
-        Ipld::Map(map) => {
-            let mut obj = serde_json::Map::new();
-            for (k, v) in map {
-                if let Some(val) = ipld_to_json(v) {
-                    obj.insert(k.to_string(), val);
-                }
-            }
-            Some(serde_json::Value::Object(obj))
-        }
-        Ipld::Link(cid) => Some(serde_json::Value::String(cid.to_string())),
-    }
-}
-
-/// Decode an AT Protocol firehose frame (header + body as sequential CBOR values)
-/// Returns the header as CborValue and the raw body bytes for typed deserialization
-fn decode_frame(data: &[u8]) -> Result<(CborValue, Vec<u8>)> {
-    let mut cursor = Cursor::new(data);
-
-    let header: CborValue =
-        ciborium::from_reader(&mut cursor).map_err(|e| IngesterError::CborDecode(e.to_string()))?;
-
-    // Return remaining bytes as body for typed deserialization
-    let pos = cursor.position() as usize;
-    let body_bytes = data[pos..].to_vec();
-
-    Ok((header, body_bytes))
-}
-
-/// Extract a string value from a CBOR map
-fn get_cbor_string(value: &CborValue, key: &str) -> Option<String> {
-    match value {
-        CborValue::Map(map) => {
-            for (k, v) in map {
-                if let CborValue::Text(k_str) = k {
-                    if k_str == key {
-                        if let CborValue::Text(s) = v {
-                            return Some(s.clone());
-                        }
-                    }
-                }
-            }
-            None
-        }
-        _ => None,
-    }
-}
-
-/// Extract an integer value from a CBOR map
-fn get_cbor_int(value: &CborValue, key: &str) -> Option<i64> {
-    match value {
-        CborValue::Map(map) => {
-            for (k, v) in map {
-                if let CborValue::Text(k_str) = k {
-                    if k_str == key {
-                        return match v {
-                            CborValue::Integer(i) => Some((*i).try_into().unwrap_or(0)),
-                            _ => None,
-                        };
-                    }
-                }
-            }
-            None
-        }
-        _ => None,
-    }
-}
-
-/// Simple base64 encoding
-fn base64_encode(data: &[u8]) -> String {
-    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
-
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0] as usize;
-        let b1 = chunk.get(1).copied().unwrap_or(0) as usize;
-        let b2 = chunk.get(2).copied().unwrap_or(0) as usize;
-
-        result.push(ALPHABET[b0 >> 2] as char);
-        result.push(ALPHABET[((b0 & 0x03) << 4) | (b1 >> 4)] as char);
-
-        if chunk.len() > 1 {
-            result.push(ALPHABET[((b1 & 0x0f) << 2) | (b2 >> 6)] as char);
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            result.push(ALPHABET[b2 & 0x3f] as char);
-        } else {
-            result.push('=');
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -428,217 +246,73 @@ mod tests {
         let (tx, _rx) = mpsc::channel(10);
         let sub = FirehoseSubscription::new(FirehoseConfig::default(), tx);
         let url = sub.build_url();
-        assert_eq!(
-            url,
-            "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos"
-        );
+        assert!(url.contains("wantedCollections=org.rwell.test.occurrence"));
+        assert!(url.contains("wantedCollections=org.rwell.test.identification"));
+        assert!(!url.contains("cursor="));
     }
 
     #[test]
     fn test_build_url_with_cursor() {
         let (tx, _rx) = mpsc::channel(10);
         let config = FirehoseConfig {
-            cursor: Some(12345),
+            cursor: Some(1234567890),
             ..Default::default()
         };
         let sub = FirehoseSubscription::new(config, tx);
         let url = sub.build_url();
-        assert_eq!(
-            url,
-            "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos?cursor=12345"
-        );
+        assert!(url.contains("cursor=1234567890"));
     }
 
     #[test]
     fn test_build_url_custom_relay() {
         let (tx, _rx) = mpsc::channel(10);
         let config = FirehoseConfig {
-            relay: "wss://custom.relay.example".to_string(),
+            relay: "wss://custom.jetstream.example/subscribe".to_string(),
             cursor: None,
         };
         let sub = FirehoseSubscription::new(config, tx);
         let url = sub.build_url();
-        assert_eq!(
-            url,
-            "wss://custom.relay.example/xrpc/com.atproto.sync.subscribeRepos"
-        );
+        assert!(url.starts_with("wss://custom.jetstream.example/subscribe"));
     }
 
     #[test]
     fn test_firehose_config_default() {
         let config = FirehoseConfig::default();
-        assert_eq!(config.relay, "wss://bsky.network");
+        assert_eq!(config.relay, DEFAULT_JETSTREAM);
         assert!(config.cursor.is_none());
     }
 
     #[test]
-    fn test_get_cursor() {
-        let (tx, _rx) = mpsc::channel(10);
-        let config = FirehoseConfig {
-            cursor: Some(999),
-            ..Default::default()
-        };
-        let sub = FirehoseSubscription::new(config, tx);
-        assert_eq!(sub.get_cursor(), Some(999));
+    fn test_parse_jetstream_event() {
+        let json = r#"{
+            "did": "did:plc:abc123",
+            "time_us": 1704067200000000,
+            "commit": {
+                "rev": "abc",
+                "operation": "create",
+                "collection": "org.rwell.test.occurrence",
+                "rkey": "123",
+                "record": {"scientificName": "Quercus alba"},
+                "cid": "bafyrei..."
+            }
+        }"#;
+
+        let event: JetstreamEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(event.did, "did:plc:abc123");
+        assert!(event.commit.is_some());
+        let commit = event.commit.unwrap();
+        assert_eq!(commit.collection, "org.rwell.test.occurrence");
+        assert_eq!(commit.operation, "create");
     }
 
     #[test]
-    fn test_base64_encode() {
-        assert_eq!(base64_encode(b"hello"), "aGVsbG8=");
-        assert_eq!(base64_encode(b"a"), "YQ==");
-        assert_eq!(base64_encode(b"ab"), "YWI=");
-        assert_eq!(base64_encode(b"abc"), "YWJj");
-    }
+    fn test_parse_jetstream_event_no_commit() {
+        let json = r#"{
+            "did": "did:plc:abc123",
+            "time_us": 1704067200000000
+        }"#;
 
-    #[test]
-    fn test_base64_encode_empty() {
-        assert_eq!(base64_encode(&[]), "");
-    }
-
-    #[test]
-    fn test_base64_encode_binary() {
-        // Test with binary data (all possible byte values in small range)
-        let data: Vec<u8> = (0..=255u8).take(6).collect();
-        let encoded = base64_encode(&data);
-        assert!(!encoded.is_empty());
-        // Should only contain valid base64 characters
-        assert!(encoded
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '='));
-    }
-
-    #[test]
-    fn test_get_cbor_string_from_map() {
-        let map = CborValue::Map(vec![
-            (
-                CborValue::Text("key1".to_string()),
-                CborValue::Text("value1".to_string()),
-            ),
-            (
-                CborValue::Text("key2".to_string()),
-                CborValue::Text("value2".to_string()),
-            ),
-        ]);
-
-        assert_eq!(get_cbor_string(&map, "key1"), Some("value1".to_string()));
-        assert_eq!(get_cbor_string(&map, "key2"), Some("value2".to_string()));
-        assert_eq!(get_cbor_string(&map, "nonexistent"), None);
-    }
-
-    #[test]
-    fn test_get_cbor_string_wrong_type() {
-        let map = CborValue::Map(vec![(
-            CborValue::Text("number".to_string()),
-            CborValue::Integer(42.into()),
-        )]);
-
-        assert_eq!(get_cbor_string(&map, "number"), None);
-    }
-
-    #[test]
-    fn test_get_cbor_string_non_map() {
-        let array = CborValue::Array(vec![CborValue::Text("item".to_string())]);
-        assert_eq!(get_cbor_string(&array, "key"), None);
-
-        let text = CborValue::Text("just a string".to_string());
-        assert_eq!(get_cbor_string(&text, "key"), None);
-    }
-
-    #[test]
-    fn test_get_cbor_int_from_map() {
-        let map = CborValue::Map(vec![
-            (
-                CborValue::Text("seq".to_string()),
-                CborValue::Integer(12345.into()),
-            ),
-            (
-                CborValue::Text("negative".to_string()),
-                CborValue::Integer((-100).into()),
-            ),
-        ]);
-
-        assert_eq!(get_cbor_int(&map, "seq"), Some(12345));
-        assert_eq!(get_cbor_int(&map, "negative"), Some(-100));
-        assert_eq!(get_cbor_int(&map, "nonexistent"), None);
-    }
-
-    #[test]
-    fn test_get_cbor_int_wrong_type() {
-        let map = CborValue::Map(vec![(
-            CborValue::Text("string".to_string()),
-            CborValue::Text("not a number".to_string()),
-        )]);
-
-        assert_eq!(get_cbor_int(&map, "string"), None);
-    }
-
-    #[test]
-    fn test_get_cbor_int_non_map() {
-        let int = CborValue::Integer(42.into());
-        assert_eq!(get_cbor_int(&int, "key"), None);
-    }
-
-    #[test]
-    fn test_decode_frame_valid() {
-        // Create a simple valid frame with header and body
-        let mut frame_data = Vec::new();
-
-        // Encode header as CBOR map
-        let header = CborValue::Map(vec![
-            (
-                CborValue::Text("op".to_string()),
-                CborValue::Integer(1.into()),
-            ),
-            (
-                CborValue::Text("t".to_string()),
-                CborValue::Text("#commit".to_string()),
-            ),
-        ]);
-        ciborium::into_writer(&header, &mut frame_data).unwrap();
-
-        // Encode body as CBOR map
-        let body = CborValue::Map(vec![
-            (
-                CborValue::Text("repo".to_string()),
-                CborValue::Text("did:plc:test".to_string()),
-            ),
-            (
-                CborValue::Text("seq".to_string()),
-                CborValue::Integer(100.into()),
-            ),
-        ]);
-        ciborium::into_writer(&body, &mut frame_data).unwrap();
-
-        let result = decode_frame(&frame_data);
-        assert!(result.is_ok());
-
-        let (decoded_header, body_bytes) = result.unwrap();
-        assert_eq!(get_cbor_int(&decoded_header, "op"), Some(1));
-        assert_eq!(
-            get_cbor_string(&decoded_header, "t"),
-            Some("#commit".to_string())
-        );
-
-        // Verify body bytes can be decoded
-        let decoded_body: CborValue = ciborium::from_reader(&body_bytes[..]).unwrap();
-        assert_eq!(
-            get_cbor_string(&decoded_body, "repo"),
-            Some("did:plc:test".to_string())
-        );
-        assert_eq!(get_cbor_int(&decoded_body, "seq"), Some(100));
-    }
-
-    #[test]
-    fn test_decode_frame_invalid() {
-        // Invalid CBOR data
-        let invalid_data = vec![0xff, 0xff, 0xff];
-        let result = decode_frame(&invalid_data);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_decode_frame_empty() {
-        let result = decode_frame(&[]);
-        assert!(result.is_err());
+        let event: JetstreamEvent = serde_json::from_str(json).unwrap();
+        assert!(event.commit.is_none());
     }
 }

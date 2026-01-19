@@ -52,8 +52,8 @@ impl From<sqlx::Error> for IngesterError {
     }
 }
 
-impl From<ciborium::de::Error<std::io::Error>> for IngesterError {
-    fn from(err: ciborium::de::Error<std::io::Error>) -> Self {
+impl From<serde_json::Error> for IngesterError {
+    fn from(err: serde_json::Error) -> Self {
         IngesterError::CborDecode(err.to_string())
     }
 }

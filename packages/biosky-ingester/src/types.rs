@@ -68,7 +68,7 @@ pub struct IngesterConfig {
 impl Default for IngesterConfig {
     fn default() -> Self {
         Self {
-            relay_url: "wss://bsky.network".to_string(),
+            relay_url: "wss://jetstream2.us-east.bsky.network/subscribe".to_string(),
             database_url: String::new(),
             cursor: None,
             port: 8080,
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = IngesterConfig::default();
-        assert_eq!(config.relay_url, "wss://bsky.network");
+        assert_eq!(config.relay_url, "wss://jetstream2.us-east.bsky.network/subscribe");
         assert_eq!(config.port, 8080);
         assert!(config.cursor.is_none());
         assert!(config.database_url.is_empty());
