@@ -5,8 +5,8 @@ use std::fmt;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum IngesterError {
-    WebSocket(tokio_tungstenite::tungstenite::Error),
-    Database(sqlx::Error),
+    WebSocket(Box<tokio_tungstenite::tungstenite::Error>),
+    Database(Box<sqlx::Error>),
     CborDecode(String),
     InvalidFrame(String),
     ConnectionClosed,
@@ -33,8 +33,8 @@ impl fmt::Display for IngesterError {
 impl std::error::Error for IngesterError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            IngesterError::WebSocket(err) => Some(err),
-            IngesterError::Database(err) => Some(err),
+            IngesterError::WebSocket(err) => Some(err.as_ref()),
+            IngesterError::Database(err) => Some(err.as_ref()),
             _ => None,
         }
     }
@@ -42,13 +42,13 @@ impl std::error::Error for IngesterError {
 
 impl From<tokio_tungstenite::tungstenite::Error> for IngesterError {
     fn from(err: tokio_tungstenite::tungstenite::Error) -> Self {
-        IngesterError::WebSocket(err)
+        IngesterError::WebSocket(Box::new(err))
     }
 }
 
 impl From<sqlx::Error> for IngesterError {
     fn from(err: sqlx::Error) -> Self {
-        IngesterError::Database(err)
+        IngesterError::Database(Box::new(err))
     }
 }
 

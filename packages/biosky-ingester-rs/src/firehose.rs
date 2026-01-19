@@ -418,7 +418,7 @@ fn get_cbor_cid(value: &CborValue, key: &str) -> Option<String> {
 /// Simple base32 encoding for CIDs (lowercase, no padding)
 fn base32_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"abcdefghijklmnopqrstuvwxyz234567";
-    let mut result = String::with_capacity((data.len() * 8 + 4) / 5);
+    let mut result = String::with_capacity((data.len() * 8).div_ceil(5));
 
     let mut bits: u64 = 0;
     let mut num_bits = 0;
@@ -495,7 +495,7 @@ fn cbor_to_json(value: &CborValue) -> Option<serde_json::Value> {
 /// Simple base64 encoding
 fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
 
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as usize;
