@@ -58,6 +58,18 @@ impl From<ciborium::de::Error<std::io::Error>> for IngesterError {
     }
 }
 
+impl From<tracing_subscriber::filter::ParseError> for IngesterError {
+    fn from(err: tracing_subscriber::filter::ParseError) -> Self {
+        IngesterError::Config(err.to_string())
+    }
+}
+
+impl From<std::io::Error> for IngesterError {
+    fn from(err: std::io::Error) -> Self {
+        IngesterError::Config(err.to_string())
+    }
+}
+
 pub type Result<T> = std::result::Result<T, IngesterError>;
 
 #[cfg(test)]

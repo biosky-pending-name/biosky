@@ -10,6 +10,7 @@ mod server;
 mod types;
 
 use crate::database::Database;
+use crate::error::{IngesterError, Result};
 use crate::firehose::{FirehoseConfig, FirehoseEvent, FirehoseSubscription};
 use crate::server::{start_server, ServerState, SharedState};
 use crate::types::{IngesterConfig, RecentEvent};
@@ -21,7 +22,7 @@ use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -167,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_config() -> anyhow::Result<IngesterConfig> {
+fn load_config() -> Result<IngesterConfig> {
     // Support both DATABASE_URL and separate DB_* environment variables
     // (for compatibility with Cloud SQL socket connections)
     let database_url = if let Ok(url) = std::env::var("DATABASE_URL") {
@@ -175,7 +176,7 @@ fn load_config() -> anyhow::Result<IngesterConfig> {
     } else {
         // Build URL from separate components (Cloud SQL style)
         let host = std::env::var("DB_HOST")
-            .map_err(|_| anyhow::anyhow!("DATABASE_URL or DB_HOST environment variable is required"))?;
+            .map_err(|_| IngesterError::Config("DATABASE_URL or DB_HOST environment variable is required".to_string()))?;
         let name = std::env::var("DB_NAME").unwrap_or_else(|_| "biosky".to_string());
         let user = std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string());
         let password = std::env::var("DB_PASSWORD").unwrap_or_default();
