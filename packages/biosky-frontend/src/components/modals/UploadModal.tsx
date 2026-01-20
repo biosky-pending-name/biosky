@@ -149,8 +149,17 @@ export function UploadModal() {
                   className={styles.suggestion}
                   onClick={() => handleSuggestionClick(s.scientificName)}
                 >
-                  <strong>{s.scientificName}</strong>
-                  {s.commonName && <span>{s.commonName}</span>}
+                  {s.photoUrl && (
+                    <img
+                      src={s.photoUrl}
+                      alt=""
+                      className={styles.suggestionPhoto}
+                    />
+                  )}
+                  <div className={styles.suggestionText}>
+                    <strong>{s.scientificName}</strong>
+                    {s.commonName && <span>{s.commonName}</span>}
+                  </div>
                 </div>
               ))}
             </div>

@@ -48,6 +48,9 @@
 }
 
 .suggestion {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.75rem;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -62,7 +65,20 @@
   border-color: var(--color-primary);
 }
 
-.suggestion span {
+.suggestionPhoto {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.suggestionText {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestionText span {
   display: block;
   font-size: 0.75rem;
   color: var(--color-text-muted);

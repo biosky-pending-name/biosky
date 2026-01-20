@@ -32,6 +32,8 @@ export type FeedTab = "home" | "explore";
 export interface TaxaResult {
   scientificName: string;
   commonName?: string;
+  photoUrl?: string;
+  rank?: string;
 }
 
 export interface FeedResponse {
