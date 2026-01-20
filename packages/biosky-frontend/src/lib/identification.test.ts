@@ -42,28 +42,28 @@ describe('IdentificationService', () => {
 
   describe('validateInput', () => {
     const validInput = {
-      observationUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
-      observationCid: 'bafyrei123',
+      occurrenceUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
+      occurrenceCid: 'bafyrei123',
       taxonName: 'Quercus alba'
     }
 
-    describe('observationUri validation', () => {
-      it('throws if observationUri is missing', async () => {
+    describe('occurrenceUri validation', () => {
+      it('throws if occurrenceUri is missing', async () => {
         await expect(
-          service.identify({ ...validInput, observationUri: '' })
-        ).rejects.toThrow('Observation URI is required')
+          service.identify({ ...validInput, occurrenceUri: '' })
+        ).rejects.toThrow('Occurrence URI is required')
       })
 
-      it('throws if observationUri does not start with at://', async () => {
+      it('throws if occurrenceUri does not start with at://', async () => {
         await expect(
-          service.identify({ ...validInput, observationUri: 'https://example.com/post' })
-        ).rejects.toThrow('Invalid observation URI format')
+          service.identify({ ...validInput, occurrenceUri: 'https://example.com/post' })
+        ).rejects.toThrow('Invalid occurrence URI format')
       })
 
       it('throws for http:// URIs', async () => {
         await expect(
-          service.identify({ ...validInput, observationUri: 'http://did:plc:test/post' })
-        ).rejects.toThrow('Invalid observation URI format')
+          service.identify({ ...validInput, occurrenceUri: 'http://did:plc:test/post' })
+        ).rejects.toThrow('Invalid occurrence URI format')
       })
 
       it('accepts valid at:// URI', async () => {
@@ -73,11 +73,11 @@ describe('IdentificationService', () => {
       })
     })
 
-    describe('observationCid validation', () => {
-      it('throws if observationCid is missing', async () => {
+    describe('occurrenceCid validation', () => {
+      it('throws if occurrenceCid is missing', async () => {
         await expect(
-          service.identify({ ...validInput, observationCid: '' })
-        ).rejects.toThrow('Observation CID is required')
+          service.identify({ ...validInput, occurrenceCid: '' })
+        ).rejects.toThrow('Occurrence CID is required')
       })
 
       it('accepts valid CID', async () => {
@@ -157,8 +157,8 @@ describe('IdentificationService', () => {
 
       await expect(
         noSessionService.identify({
-          observationUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
-          observationCid: 'bafyrei123',
+          occurrenceUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
+          occurrenceCid: 'bafyrei123',
           taxonName: 'Quercus alba'
         })
       ).rejects.toThrow('Not logged in')
@@ -166,8 +166,8 @@ describe('IdentificationService', () => {
 
     it('returns uri and cid on success', async () => {
       const result = await service.identify({
-        observationUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
-        observationCid: 'bafyrei123',
+        occurrenceUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
+        occurrenceCid: 'bafyrei123',
         taxonName: 'Quercus alba'
       })
 
@@ -179,8 +179,8 @@ describe('IdentificationService', () => {
 
     it('creates record with correct structure', async () => {
       await service.identify({
-        observationUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
-        observationCid: 'bafyrei123',
+        occurrenceUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
+        occurrenceCid: 'bafyrei123',
         taxonName: 'Quercus alba',
         taxonRank: 'species',
         comment: 'Distinctive bark pattern',
@@ -210,8 +210,8 @@ describe('IdentificationService', () => {
 
     it('uses default values when optional fields not provided', async () => {
       await service.identify({
-        observationUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
-        observationCid: 'bafyrei123',
+        occurrenceUri: 'at://did:plc:test/org.rwell.test.occurrence/1',
+        occurrenceCid: 'bafyrei123',
         taxonName: 'Quercus alba'
       })
 

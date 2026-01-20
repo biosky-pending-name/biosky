@@ -7,7 +7,7 @@ import styles from "./FeedView.module.css";
 
 export function FeedView() {
   const dispatch = useAppDispatch();
-  const { observations, isLoading, currentTab, hasMore } = useAppSelector(
+  const { occurrences, isLoading, currentTab, hasMore } = useAppSelector(
     (state) => state.feed
   );
   const contentRef = useRef<HTMLDivElement>(null);
@@ -49,14 +49,14 @@ export function FeedView() {
       </nav>
       <div className={styles.content} ref={contentRef} onScroll={handleScroll}>
         <div className={styles.list}>
-          {observations.map((obs) => (
-            <FeedItem key={obs.uri} observation={obs} />
+          {occurrences.map((occ) => (
+            <FeedItem key={occ.uri} occurrence={occ} />
           ))}
         </div>
         {isLoading && <div className={styles.loading}>Loading...</div>}
-        {!isLoading && observations.length === 0 && (
+        {!isLoading && occurrences.length === 0 && (
           <div className={styles.empty}>
-            No observations yet. Be the first to post!
+            No occurrences yet. Be the first to post!
           </div>
         )}
       </div>

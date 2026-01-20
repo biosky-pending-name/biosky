@@ -1,7 +1,7 @@
 import type {
   User,
   FeedResponse,
-  Observation,
+  Occurrence,
   TaxaResult,
   GeoJSONFeatureCollection,
 } from "./types";
@@ -48,24 +48,24 @@ export async function fetchFeed(cursor?: string): Promise<FeedResponse> {
   return response.json();
 }
 
-export async function fetchObservation(
+export async function fetchOccurrence(
   uri: string
-): Promise<{ observation: Observation } | null> {
+): Promise<{ occurrence: Occurrence } | null> {
   try {
     const url = `${API_BASE}/api/occurrences/${encodeURIComponent(uri)}`;
-    console.log("fetchObservation - uri:", uri);
-    console.log("fetchObservation - url:", url);
+    console.log("fetchOccurrence - uri:", uri);
+    console.log("fetchOccurrence - url:", url);
     const response = await fetch(url);
-    console.log("fetchObservation - response status:", response.status);
+    console.log("fetchOccurrence - response status:", response.status);
     if (!response.ok) return null;
     return response.json();
   } catch (e) {
-    console.error("fetchObservation error:", e);
+    console.error("fetchOccurrence error:", e);
     return null;
   }
 }
 
-export async function fetchObservationsGeoJSON(bounds: {
+export async function fetchOccurrencesGeoJSON(bounds: {
   minLat: number;
   minLng: number;
   maxLat: number;
@@ -80,7 +80,7 @@ export async function fetchObservationsGeoJSON(bounds: {
 
   const response = await fetch(`${API_BASE}/api/occurrences/geojson?${params}`);
   if (!response.ok) {
-    throw new Error("Failed to load observations");
+    throw new Error("Failed to load occurrences");
   }
 
   return response.json();
@@ -98,7 +98,7 @@ export async function searchTaxa(query: string): Promise<TaxaResult[]> {
   return data.results || [];
 }
 
-export async function submitObservation(data: {
+export async function submitOccurrence(data: {
   scientificName: string;
   latitude: number;
   longitude: number;

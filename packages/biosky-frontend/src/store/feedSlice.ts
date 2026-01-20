@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import type { Observation, FeedTab } from "../services/types";
+import type { Occurrence, FeedTab } from "../services/types";
 import * as api from "../services/api";
 
 interface FeedState {
-  observations: Observation[];
+  occurrences: Occurrence[];
   cursor: string | undefined;
   isLoading: boolean;
   currentTab: FeedTab;
@@ -11,7 +11,7 @@ interface FeedState {
 }
 
 const initialState: FeedState = {
-  observations: [],
+  occurrences: [],
   cursor: undefined,
   isLoading: false,
   currentTab: "home",
@@ -39,12 +39,12 @@ const feedSlice = createSlice({
   reducers: {
     switchTab: (state, action: PayloadAction<FeedTab>) => {
       state.currentTab = action.payload;
-      state.observations = [];
+      state.occurrences = [];
       state.cursor = undefined;
       state.hasMore = true;
     },
     resetFeed: (state) => {
-      state.observations = [];
+      state.occurrences = [];
       state.cursor = undefined;
       state.hasMore = true;
     },
@@ -55,8 +55,8 @@ const feedSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(loadFeed.fulfilled, (state, action) => {
-        state.observations = [
-          ...state.observations,
+        state.occurrences = [
+          ...state.occurrences,
           ...action.payload.occurrences,
         ];
         state.cursor = action.payload.cursor;
@@ -68,11 +68,11 @@ const feedSlice = createSlice({
       })
       .addCase(loadInitialFeed.pending, (state) => {
         state.isLoading = true;
-        state.observations = [];
+        state.occurrences = [];
         state.cursor = undefined;
       })
       .addCase(loadInitialFeed.fulfilled, (state, action) => {
-        state.observations = action.payload.occurrences;
+        state.occurrences = action.payload.occurrences;
         state.cursor = action.payload.cursor;
         state.hasMore = !!action.payload.cursor;
         state.isLoading = false;

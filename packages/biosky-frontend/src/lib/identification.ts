@@ -10,10 +10,10 @@ import { AtpAgent } from "@atproto/api";
 const IDENTIFICATION_COLLECTION = "org.rwell.test.identification";
 
 interface IdentificationInput {
-  /** URI of the observation being identified */
-  observationUri: string;
-  /** CID of the observation being identified */
-  observationCid: string;
+  /** URI of the occurrence being identified */
+  occurrenceUri: string;
+  /** CID of the occurrence being identified */
+  occurrenceCid: string;
   /** The proposed scientific name */
   taxonName: string;
   /** Taxonomic rank */
@@ -52,7 +52,7 @@ export class IdentificationService {
   }
 
   /**
-   * Submit an identification for an observation
+   * Submit an identification for an occurrence
    */
   async identify(input: IdentificationInput): Promise<IdentificationResult> {
     if (!this.agent.session) {
@@ -65,8 +65,8 @@ export class IdentificationService {
     const record = {
       $type: IDENTIFICATION_COLLECTION,
       subject: {
-        uri: input.observationUri,
-        cid: input.observationCid,
+        uri: input.occurrenceUri,
+        cid: input.occurrenceCid,
       },
       taxonName: input.taxonName,
       taxonRank: input.taxonRank || "species",
@@ -92,13 +92,13 @@ export class IdentificationService {
    * Agree with an existing identification
    */
   async agree(
-    observationUri: string,
-    observationCid: string,
+    occurrenceUri: string,
+    occurrenceCid: string,
     currentTaxonName: string
   ): Promise<IdentificationResult> {
     return this.identify({
-      observationUri,
-      observationCid,
+      occurrenceUri,
+      occurrenceCid,
       taxonName: currentTaxonName,
       isAgreement: true,
       confidence: "high",
@@ -109,8 +109,8 @@ export class IdentificationService {
    * Suggest a different identification
    */
   async suggestId(
-    observationUri: string,
-    observationCid: string,
+    occurrenceUri: string,
+    occurrenceCid: string,
     taxonName: string,
     options: {
       taxonRank?: TaxonRank;
@@ -119,8 +119,8 @@ export class IdentificationService {
     } = {}
   ): Promise<IdentificationResult> {
     return this.identify({
-      observationUri,
-      observationCid,
+      occurrenceUri,
+      occurrenceCid,
       taxonName,
       taxonRank: options.taxonRank,
       comment: options.comment,
@@ -153,7 +153,7 @@ export class IdentificationService {
    */
   async update(
     identificationUri: string,
-    updates: Partial<Omit<IdentificationInput, "observationUri" | "observationCid">>
+    updates: Partial<Omit<IdentificationInput, "occurrenceUri" | "occurrenceCid">>
   ): Promise<IdentificationResult> {
     if (!this.agent.session) {
       throw new Error("Not logged in");
@@ -222,12 +222,12 @@ export class IdentificationService {
   }
 
   private validateInput(input: IdentificationInput): void {
-    if (!input.observationUri) {
-      throw new Error("Observation URI is required");
+    if (!input.occurrenceUri) {
+      throw new Error("Occurrence URI is required");
     }
 
-    if (!input.observationCid) {
-      throw new Error("Observation CID is required");
+    if (!input.occurrenceCid) {
+      throw new Error("Occurrence CID is required");
     }
 
     if (!input.taxonName || input.taxonName.trim().length === 0) {
@@ -243,8 +243,8 @@ export class IdentificationService {
     }
 
     // Validate URI format
-    if (!input.observationUri.startsWith("at://")) {
-      throw new Error("Invalid observation URI format");
+    if (!input.occurrenceUri.startsWith("at://")) {
+      throw new Error("Invalid occurrence URI format");
     }
   }
 }
@@ -254,7 +254,7 @@ export class IdentificationService {
  */
 export function createIdentificationUI(
   container: HTMLElement,
-  observation: {
+  occurrence: {
     uri: string;
     cid: string;
     scientificName: string;
@@ -267,7 +267,7 @@ export function createIdentificationUI(
     <div class="identification-panel">
       <div class="current-id">
         <span class="label">Community ID:</span>
-        <span class="taxon">${observation.communityId || observation.scientificName}</span>
+        <span class="taxon">${occurrence.communityId || occurrence.scientificName}</span>
       </div>
 
       <div class="id-actions">
@@ -315,9 +315,9 @@ export function createIdentificationUI(
   agreeBtn?.addEventListener("click", async () => {
     try {
       await service.agree(
-        observation.uri,
-        observation.cid,
-        observation.communityId || observation.scientificName
+        occurrence.uri,
+        occurrence.cid,
+        occurrence.communityId || occurrence.scientificName
       );
       alert("Your agreement has been recorded!");
       onSuccess?.();
@@ -345,7 +345,7 @@ export function createIdentificationUI(
     }
 
     try {
-      await service.suggestId(observation.uri, observation.cid, taxonInput.value.trim(), {
+      await service.suggestId(occurrence.uri, occurrence.cid, taxonInput.value.trim(), {
         comment: commentInput.value.trim() || undefined,
         confidence: confidenceSelect.value as ConfidenceLevel,
       });

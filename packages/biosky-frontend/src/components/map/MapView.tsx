@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchObservationsGeoJSON, fetchObservation, getImageUrl } from "../../services/api";
-import type { Observation } from "../../services/types";
+import { fetchOccurrencesGeoJSON, fetchOccurrence, getImageUrl } from "../../services/api";
+import type { Occurrence } from "../../services/types";
 import styles from "./MapView.module.css";
 
 export function MapView() {
@@ -45,7 +45,7 @@ export function MapView() {
     mapInstance.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     mapInstance.on("load", () => {
-      mapInstance.addSource("observations", {
+      mapInstance.addSource("occurrences", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
         cluster: true,
@@ -56,7 +56,7 @@ export function MapView() {
       mapInstance.addLayer({
         id: "clusters",
         type: "circle",
-        source: "observations",
+        source: "occurrences",
         filter: ["has", "point_count"],
         paint: {
           "circle-color": "#22c55e",
@@ -79,7 +79,7 @@ export function MapView() {
       mapInstance.addLayer({
         id: "cluster-count",
         type: "symbol",
-        source: "observations",
+        source: "occurrences",
         filter: ["has", "point_count"],
         layout: {
           "text-field": "{point_count_abbreviated}",
@@ -92,9 +92,9 @@ export function MapView() {
       });
 
       mapInstance.addLayer({
-        id: "observation-points",
+        id: "occurrence-points",
         type: "circle",
-        source: "observations",
+        source: "occurrences",
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": "#22c55e",
@@ -104,7 +104,7 @@ export function MapView() {
         },
       });
 
-      loadObservations(mapInstance);
+      loadOccurrences(mapInstance);
       setIsInitialized(true);
     });
 
@@ -113,7 +113,7 @@ export function MapView() {
         layers: ["clusters"],
       });
       const clusterId = features[0].properties?.cluster_id;
-      const source = mapInstance.getSource("observations") as maplibregl.GeoJSONSource;
+      const source = mapInstance.getSource("occurrences") as maplibregl.GeoJSONSource;
       try {
         const zoom = await source.getClusterExpansionZoom(clusterId);
         const geometry = features[0].geometry;
@@ -128,7 +128,7 @@ export function MapView() {
       }
     });
 
-    mapInstance.on("click", "observation-points", async (e) => {
+    mapInstance.on("click", "occurrence-points", async (e) => {
       const feature = e.features?.[0];
       if (!feature) return;
 
@@ -136,10 +136,10 @@ export function MapView() {
       const geometry = feature.geometry;
       if (geometry.type !== "Point") return;
 
-      const result = await fetchObservation(props?.uri);
+      const result = await fetchOccurrence(props?.uri);
       if (!result) return;
 
-      showPopup(mapInstance, result.observation, geometry.coordinates as [number, number]);
+      showPopup(mapInstance, result.occurrence, geometry.coordinates as [number, number]);
     });
 
     mapInstance.on("mouseenter", "clusters", () => {
@@ -148,15 +148,15 @@ export function MapView() {
     mapInstance.on("mouseleave", "clusters", () => {
       mapInstance.getCanvas().style.cursor = "";
     });
-    mapInstance.on("mouseenter", "observation-points", () => {
+    mapInstance.on("mouseenter", "occurrence-points", () => {
       mapInstance.getCanvas().style.cursor = "pointer";
     });
-    mapInstance.on("mouseleave", "observation-points", () => {
+    mapInstance.on("mouseleave", "occurrence-points", () => {
       mapInstance.getCanvas().style.cursor = "";
     });
 
     mapInstance.on("moveend", () => {
-      loadObservations(mapInstance);
+      loadOccurrences(mapInstance);
     });
 
     map.current = mapInstance;
@@ -173,50 +173,50 @@ export function MapView() {
   );
 }
 
-async function loadObservations(map: maplibregl.Map) {
+async function loadOccurrences(map: maplibregl.Map) {
   const bounds = map.getBounds();
   try {
-    const geojson = await fetchObservationsGeoJSON({
+    const geojson = await fetchOccurrencesGeoJSON({
       minLat: bounds.getSouth(),
       minLng: bounds.getWest(),
       maxLat: bounds.getNorth(),
       maxLng: bounds.getEast(),
     });
-    const source = map.getSource("observations") as maplibregl.GeoJSONSource;
+    const source = map.getSource("occurrences") as maplibregl.GeoJSONSource;
     if (source) {
       source.setData(geojson);
     }
   } catch (error) {
-    console.error("Failed to load observations:", error);
+    console.error("Failed to load occurrences:", error);
   }
 }
 
 function showPopup(
   map: maplibregl.Map,
-  observation: Observation,
+  occurrence: Occurrence,
   coords: [number, number]
 ) {
-  const imageHtml = observation.images[0]
-    ? `<img src="${getImageUrl(observation.images[0])}" alt="${observation.scientificName}" style="width: 100%; border-radius: 0.5rem; margin-bottom: 0.5rem;" />`
+  const imageHtml = occurrence.images[0]
+    ? `<img src="${getImageUrl(occurrence.images[0])}" alt="${occurrence.scientificName}" style="width: 100%; border-radius: 0.5rem; margin-bottom: 0.5rem;" />`
     : "";
 
-  const detailUrl = `/observation/${encodeURIComponent(observation.uri)}`;
+  const detailUrl = `/occurrence/${encodeURIComponent(occurrence.uri)}`;
 
   new maplibregl.Popup({ maxWidth: "300px" })
     .setLngLat(coords)
     .setHTML(
       `
-      <div class="observation-popup" style="padding: 1rem;">
+      <div class="occurrence-popup" style="padding: 1rem;">
         ${imageHtml}
         <h3 style="font-size: 1rem; font-style: italic; color: #22c55e; margin-bottom: 0.25rem;">
-          ${observation.scientificName || "Unknown species"}
+          ${occurrence.scientificName || "Unknown species"}
         </h3>
         <div style="font-size: 0.875rem; color: #999; margin-bottom: 0.5rem;">
-          by @${observation.observer.handle || observation.observer.did.slice(0, 20)}
+          by @${occurrence.observer.handle || occurrence.observer.did.slice(0, 20)}
         </div>
         <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.75rem;">
-          ${new Date(observation.eventDate).toLocaleDateString()}
-          ${observation.verbatimLocality ? ` &bull; ${observation.verbatimLocality}` : ""}
+          ${new Date(occurrence.eventDate).toLocaleDateString()}
+          ${occurrence.verbatimLocality ? ` &bull; ${occurrence.verbatimLocality}` : ""}
         </div>
         <a href="${detailUrl}" style="display: block; text-align: center; padding: 0.5rem; background: #22c55e; color: #0a0a0a; border-radius: 0.375rem; text-decoration: none; font-size: 0.875rem; font-weight: 500;">
           View Details

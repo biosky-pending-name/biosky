@@ -13,7 +13,7 @@ export function FAB() {
     <button
       className={styles.fab}
       onClick={handleClick}
-      title="New observation"
+      title="New occurrence"
     >
       +
     </button>

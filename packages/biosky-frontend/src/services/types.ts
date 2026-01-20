@@ -1,4 +1,4 @@
-export interface Observation {
+export interface Occurrence {
   uri: string;
   cid: string;
   observer: {
@@ -35,7 +35,7 @@ export interface TaxaResult {
 }
 
 export interface FeedResponse {
-  occurrences: Observation[];
+  occurrences: Occurrence[];
   cursor?: string;
 }
 

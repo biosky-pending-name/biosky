@@ -12,4 +12,11 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "../../dist/public"),
     emptyOutDir: true,
   },
+  server: {
+    proxy: {
+      "/api": "http://localhost:3000",
+      "/oauth": "http://localhost:3000",
+      "/media": "http://localhost:3000",
+    },
+  },
 });

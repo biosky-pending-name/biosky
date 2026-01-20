@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import type { Observation } from "../../services/types";
+import type { Occurrence } from "../../services/types";
 import { getImageUrl } from "../../services/api";
 import styles from "./FeedItem.module.css";
 
 interface FeedItemProps {
-  observation: Observation;
+  occurrence: Occurrence;
 }
 
 function formatTimeAgo(date: Date): string {
@@ -18,28 +18,28 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function FeedItem({ observation }: FeedItemProps) {
+export function FeedItem({ occurrence }: FeedItemProps) {
   const displayName =
-    observation.observer.displayName ||
-    observation.observer.handle ||
-    observation.observer.did.slice(0, 20);
-  const handle = observation.observer.handle
-    ? `@${observation.observer.handle}`
+    occurrence.observer.displayName ||
+    occurrence.observer.handle ||
+    occurrence.observer.did.slice(0, 20);
+  const handle = occurrence.observer.handle
+    ? `@${occurrence.observer.handle}`
     : "";
-  const timeAgo = formatTimeAgo(new Date(observation.createdAt));
+  const timeAgo = formatTimeAgo(new Date(occurrence.createdAt));
   const species =
-    observation.communityId || observation.scientificName || "Unknown species";
-  const imageUrl = observation.images[0]
-    ? getImageUrl(observation.images[0])
+    occurrence.communityId || occurrence.scientificName || "Unknown species";
+  const imageUrl = occurrence.images[0]
+    ? getImageUrl(occurrence.images[0])
     : "";
 
-  const observationUrl = `/observation/${encodeURIComponent(observation.uri)}`;
+  const occurrenceUrl = `/occurrence/${encodeURIComponent(occurrence.uri)}`;
 
   return (
-    <Link to={observationUrl} className={styles.item}>
+    <Link to={occurrenceUrl} className={styles.item}>
       <div className={styles.avatar}>
-        {observation.observer.avatar && (
-          <img src={observation.observer.avatar} alt={displayName} />
+        {occurrence.observer.avatar && (
+          <img src={occurrence.observer.avatar} alt={displayName} />
         )}
       </div>
       <div className={styles.body}>
@@ -49,11 +49,11 @@ export function FeedItem({ observation }: FeedItemProps) {
           <span className={styles.time}>{timeAgo}</span>
         </div>
         <div className={styles.species}>{species}</div>
-        {observation.occurrenceRemarks && (
-          <div className={styles.notes}>{observation.occurrenceRemarks}</div>
+        {occurrence.occurrenceRemarks && (
+          <div className={styles.notes}>{occurrence.occurrenceRemarks}</div>
         )}
-        {observation.verbatimLocality && (
-          <div className={styles.location}>{observation.verbatimLocality}</div>
+        {occurrence.verbatimLocality && (
+          <div className={styles.location}>{occurrence.verbatimLocality}</div>
         )}
         {imageUrl && (
           <div className={styles.image}>

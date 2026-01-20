@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeUploadModal, addToast } from "../../store/uiSlice";
 import { resetFeed, loadInitialFeed } from "../../store/feedSlice";
-import { submitObservation, searchTaxa } from "../../services/api";
+import { submitOccurrence, searchTaxa } from "../../services/api";
 import type { TaxaResult } from "../../services/types";
 import { ModalOverlay } from "./ModalOverlay";
 import styles from "./UploadModal.module.css";
@@ -85,7 +85,7 @@ export function UploadModal() {
     setIsSubmitting(true);
 
     try {
-      await submitObservation({
+      await submitOccurrence({
         scientificName: species || "Unknown species",
         latitude: parseFloat(lat),
         longitude: parseFloat(lng),
@@ -93,7 +93,7 @@ export function UploadModal() {
         eventDate: new Date().toISOString(),
       });
 
-      dispatch(addToast({ message: "Observation submitted successfully!", type: "success" }));
+      dispatch(addToast({ message: "Occurrence submitted successfully!", type: "success" }));
       handleClose();
       dispatch(resetFeed());
       dispatch(loadInitialFeed());
@@ -118,7 +118,7 @@ export function UploadModal() {
           ? `Posting as @${user.handle}`
           : "Demo Mode - Login to post to AT Protocol"}
       </div>
-      <h2>New Observation</h2>
+      <h2>New Occurrence</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="species-input">Species</label>

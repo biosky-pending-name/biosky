@@ -4,7 +4,7 @@ import type { AtpAgent } from "@atproto/api";
 import styles from "./IdentificationPanel.module.css";
 
 interface IdentificationPanelProps {
-  observation: {
+  occurrence: {
     uri: string;
     cid: string;
     scientificName?: string;
@@ -15,7 +15,7 @@ interface IdentificationPanelProps {
 }
 
 export function IdentificationPanel({
-  observation,
+  occurrence,
   agent,
   onSuccess,
 }: IdentificationPanelProps) {
@@ -26,12 +26,12 @@ export function IdentificationPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const service = new IdentificationService(agent);
-  const currentId = observation.communityId || observation.scientificName || "Unknown";
+  const currentId = occurrence.communityId || occurrence.scientificName || "Unknown";
 
   const handleAgree = async () => {
     setIsSubmitting(true);
     try {
-      await service.agree(observation.uri, observation.cid, currentId);
+      await service.agree(occurrence.uri, occurrence.cid, currentId);
       alert("Your agreement has been recorded!");
       onSuccess?.();
     } catch (error) {
@@ -51,7 +51,7 @@ export function IdentificationPanel({
 
     setIsSubmitting(true);
     try {
-      await service.suggestId(observation.uri, observation.cid, taxonName.trim(), {
+      await service.suggestId(occurrence.uri, occurrence.cid, taxonName.trim(), {
         comment: comment.trim() || undefined,
         confidence,
       });
