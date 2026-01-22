@@ -12,6 +12,7 @@ import { LoginModal } from "./components/modals/LoginModal";
 import { UploadModal } from "./components/modals/UploadModal";
 import { FAB } from "./components/common/FAB";
 import { ToastContainer } from "./components/common/Toast";
+import { NotFound } from "./components/common/NotFound";
 import "./styles/global.css";
 
 function AppContent() {
@@ -29,6 +30,7 @@ function AppContent() {
           <Route path="/" element={<FeedView />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/occurrence/:uri" element={<OccurrenceDetail />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <FAB />
