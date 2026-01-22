@@ -138,7 +138,7 @@ describe("AppViewServer", () => {
       expect(res.body.error).toBe("latitude and longitude are required");
     });
 
-    it("creates demo occurrence when not authenticated", async () => {
+    it("returns 401 when not authenticated", async () => {
       const res = await request(app).post("/api/occurrences").send({
         scientificName: "Quercus agrifolia",
         latitude: 37.7749,
@@ -146,11 +146,8 @@ describe("AppViewServer", () => {
         notes: "Test observation",
       });
 
-      expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.uri).toMatch(/^at:\/\/did:plc:demo-user-/);
-      expect(res.body.message).toContain("demo mode");
-      expect(mockDatabase.upsertOccurrence).toHaveBeenCalled();
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("Authentication required to create observations");
     });
 
     it("creates AT Protocol record when authenticated", async () => {

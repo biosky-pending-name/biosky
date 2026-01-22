@@ -189,79 +189,45 @@ export class AppViewServer {
           return;
         }
 
-        // Check if user is authenticated
+        // Require authentication
         const sessionDid = req.cookies?.session_did;
         const agent = sessionDid ? await this.oauth.getAgent(sessionDid) : null;
 
-        if (agent) {
-          // User is authenticated - post to AT Protocol network
-          const record = {
-            $type: "org.rwell.test.occurrence",
-            scientificName: scientificName || undefined,
-            eventDate: eventDate || new Date().toISOString(),
-            location: {
-              decimalLatitude: String(latitude),
-              decimalLongitude: String(longitude),
-              coordinateUncertaintyInMeters: 50,
-              geodeticDatum: "WGS84",
-            },
-            notes: notes || undefined,
-            createdAt: new Date().toISOString(),
-          };
-
-          // Create the record on the user's PDS
-          const result = await agent.com.atproto.repo.createRecord({
-            repo: sessionDid,
-            collection: "org.rwell.test.occurrence",
-            record,
-          });
-
-          logger.info({ uri: result.data.uri }, "Created AT Protocol record");
-
-          res.status(201).json({
-            success: true,
-            uri: result.data.uri,
-            cid: result.data.cid,
-            message: "Observation posted to AT Protocol network",
-          });
-        } else {
-          // Demo mode - insert directly into database with fake DID
-          const did = "did:plc:demo-user-" + Math.random().toString(36).slice(2, 10);
-          const rkey = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-          const uri = `at://${did}/org.rwell.test.occurrence/${rkey}`;
-          const cid = "bafyrei" + Math.random().toString(36).slice(2, 50);
-
-          await this.db.upsertOccurrence({
-            uri,
-            cid,
-            did,
-            action: "create",
-            seq: Date.now(),
-            time: new Date().toISOString(),
-            record: {
-              $type: "org.rwell.test.occurrence",
-              basisOfRecord: "HumanObservation",
-              scientificName: scientificName || undefined,
-              eventDate: eventDate || new Date().toISOString(),
-              location: {
-                decimalLatitude: latitude,
-                decimalLongitude: longitude,
-                coordinateUncertaintyInMeters: 50,
-                geodeticDatum: "WGS84",
-              },
-              occurrenceStatus: "present",
-              notes: notes || undefined,
-              blobs: [],
-              createdAt: new Date().toISOString(),
-            },
-          });
-
-          res.status(201).json({
-            success: true,
-            uri,
-            message: "Observation created (demo mode - login to post to AT Protocol)",
-          });
+        if (!agent) {
+          res.status(401).json({ error: "Authentication required to create observations" });
+          return;
         }
+
+        // User is authenticated - post to AT Protocol network
+        const record = {
+          $type: "org.rwell.test.occurrence",
+          scientificName: scientificName || undefined,
+          eventDate: eventDate || new Date().toISOString(),
+          location: {
+            decimalLatitude: String(latitude),
+            decimalLongitude: String(longitude),
+            coordinateUncertaintyInMeters: 50,
+            geodeticDatum: "WGS84",
+          },
+          notes: notes || undefined,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Create the record on the user's PDS
+        const result = await agent.com.atproto.repo.createRecord({
+          repo: sessionDid,
+          collection: "org.rwell.test.occurrence",
+          record,
+        });
+
+        logger.info({ uri: result.data.uri }, "Created AT Protocol record");
+
+        res.status(201).json({
+          success: true,
+          uri: result.data.uri,
+          cid: result.data.cid,
+          message: "Observation posted to AT Protocol network",
+        });
       } catch (error) {
         logger.error({ err: error }, "Error creating occurrence");
         res.status(500).json({ error: "Internal server error" });

@@ -139,11 +139,11 @@ export function UploadModal() {
 
   return (
     <ModalOverlay isOpen={isOpen} onClose={handleClose}>
-      <div className={user ? styles.authBanner : styles.demoBanner}>
-        {user
-          ? `Posting as ${user.handle ? `@${user.handle}` : user.did}`
-          : "Demo Mode - Login to post to AT Protocol"}
-      </div>
+      {user && (
+        <div className={styles.authBanner}>
+          Posting as {user.handle ? `@${user.handle}` : user.did}
+        </div>
+      )}
       <h2>{isEditMode ? "Edit Occurrence" : "New Occurrence"}</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
