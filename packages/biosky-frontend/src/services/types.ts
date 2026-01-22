@@ -29,11 +29,31 @@ export interface User {
 export type ViewMode = "feed" | "map";
 export type FeedTab = "home" | "explore";
 
+/**
+ * IUCN Red List conservation status categories
+ */
+export type IUCNCategory =
+  | "EX" // Extinct
+  | "EW" // Extinct in the Wild
+  | "CR" // Critically Endangered
+  | "EN" // Endangered
+  | "VU" // Vulnerable
+  | "NT" // Near Threatened
+  | "LC" // Least Concern
+  | "DD" // Data Deficient
+  | "NE"; // Not Evaluated
+
+export interface ConservationStatus {
+  category: IUCNCategory;
+  source: string;
+}
+
 export interface TaxaResult {
   scientificName: string;
   commonName?: string;
   photoUrl?: string;
   rank?: string;
+  conservationStatus?: ConservationStatus;
 }
 
 export interface FeedResponse {

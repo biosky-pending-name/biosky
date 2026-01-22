@@ -5,6 +5,7 @@ import { resetFeed, loadInitialFeed } from "../../store/feedSlice";
 import { submitOccurrence, searchTaxa } from "../../services/api";
 import type { TaxaResult } from "../../services/types";
 import { ModalOverlay } from "./ModalOverlay";
+import { ConservationStatus } from "../common/ConservationStatus";
 import styles from "./UploadModal.module.css";
 
 const QUICK_SPECIES = [
@@ -157,7 +158,12 @@ export function UploadModal() {
                     />
                   )}
                   <div className={styles.suggestionText}>
-                    <strong>{s.scientificName}</strong>
+                    <div className={styles.suggestionHeader}>
+                      <strong>{s.scientificName}</strong>
+                      {s.conservationStatus && (
+                        <ConservationStatus status={s.conservationStatus} size="sm" />
+                      )}
+                    </div>
                     {s.commonName && <span>{s.commonName}</span>}
                   </div>
                 </div>

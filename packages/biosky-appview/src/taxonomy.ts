@@ -4,6 +4,26 @@
  * Integrates with GBIF API to validate and search for taxonomic names.
  */
 
+/**
+ * IUCN Red List conservation status categories
+ * @see https://www.iucnredlist.org/resources/categories-and-criteria
+ */
+type IUCNCategory =
+  | "EX" // Extinct
+  | "EW" // Extinct in the Wild
+  | "CR" // Critically Endangered
+  | "EN" // Endangered
+  | "VU" // Vulnerable
+  | "NT" // Near Threatened
+  | "LC" // Least Concern
+  | "DD" // Data Deficient
+  | "NE"; // Not Evaluated
+
+interface ConservationStatus {
+  category: IUCNCategory;
+  source: string;
+}
+
 interface TaxonResult {
   id: string;
   scientificName: string;
@@ -17,6 +37,7 @@ interface TaxonResult {
   genus?: string;
   species?: string;
   source: "gbif";
+  conservationStatus?: ConservationStatus;
 }
 
 interface ValidationResult {
@@ -60,7 +81,7 @@ export class TaxonomyResolver {
     }
 
     const matchType = gbifMatch.diagnostics?.matchType;
-    const taxon = this.gbifV2ToTaxon(gbifMatch.usage);
+    const taxon = this.gbifV2ToTaxon(gbifMatch.usage, gbifMatch.additionalStatus);
 
     if (matchType === "EXACT") {
       return {
@@ -78,7 +99,7 @@ export class TaxonomyResolver {
   }
 
   /**
-   * Search GBIF species API
+   * Search GBIF species API and enrich with conservation status
    */
   private async searchGbif(query: string, limit: number): Promise<TaxonResult[]> {
     try {
@@ -88,7 +109,29 @@ export class TaxonomyResolver {
       if (!response.ok) return [];
 
       const data = (await response.json()) as GbifSuggestResult[];
-      return data.map((item) => this.gbifToTaxon(item));
+      const basicResults = data.map((item) => this.gbifToTaxon(item));
+
+      // Enrich with conservation status from v2 API (in parallel)
+      const enrichedResults = await Promise.all(
+        basicResults.map(async (result) => {
+          const match = await this.matchGbif(result.scientificName);
+          if (match?.additionalStatus) {
+            const iucnStatus = match.additionalStatus.find((s) => s.datasetAlias === "IUCN");
+            if (iucnStatus?.statusCode) {
+              return {
+                ...result,
+                conservationStatus: {
+                  category: iucnStatus.statusCode as IUCNCategory,
+                  source: "IUCN",
+                },
+              };
+            }
+          }
+          return result;
+        }),
+      );
+
+      return enrichedResults;
     } catch (error) {
       console.error("GBIF search error:", error);
       return [];
@@ -136,7 +179,19 @@ export class TaxonomyResolver {
   /**
    * Convert GBIF v2 result to TaxonResult
    */
-  private gbifV2ToTaxon(usage: GbifV2NameUsage): TaxonResult {
+  private gbifV2ToTaxon(
+    usage: GbifV2NameUsage,
+    additionalStatus?: GbifV2AdditionalStatus[],
+  ): TaxonResult {
+    // Extract IUCN conservation status if available
+    const iucnStatus = additionalStatus?.find((s) => s.datasetAlias === "IUCN");
+    const conservationStatus: ConservationStatus | undefined = iucnStatus?.statusCode
+      ? {
+          category: iucnStatus.statusCode as IUCNCategory,
+          source: "IUCN",
+        }
+      : undefined;
+
     return {
       id: `gbif:${usage.key}`,
       scientificName: usage.canonicalName || usage.name || "",
@@ -149,6 +204,7 @@ export class TaxonomyResolver {
       genus: usage.genus,
       species: usage.species,
       source: "gbif",
+      conservationStatus,
     };
   }
 }
@@ -190,14 +246,21 @@ interface GbifV2NameUsage {
   species?: string;
 }
 
+interface GbifV2AdditionalStatus {
+  status?: string;
+  statusCode?: string;
+  datasetAlias?: string;
+}
+
 interface GbifV2MatchResult {
   synonym: boolean;
   usage?: GbifV2NameUsage;
   classification?: GbifV2NameUsage[];
+  additionalStatus?: GbifV2AdditionalStatus[];
   diagnostics?: {
     matchType?: "EXACT" | "FUZZY" | "HIGHERRANK" | "NONE";
     confidence?: number;
   };
 }
 
-export type { TaxonResult, ValidationResult };
+export type { TaxonResult, ValidationResult, ConservationStatus, IUCNCategory };

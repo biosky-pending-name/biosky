@@ -78,6 +78,13 @@
   min-width: 0;
 }
 
+.suggestionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .suggestionText span {
   display: block;
   font-size: 0.75rem;
