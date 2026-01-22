@@ -300,7 +300,16 @@ describe('TaxonomyResolver', () => {
   // ============================================================================
   describe('caching', () => {
     it('returns cached results for same query within TTL', async () => {
-      mockFetch([{ key: 1, scientificName: 'Cached Species Test' }])
+      // Mock both suggest and match API calls (match is called to enrich with conservation status)
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ key: 1, scientificName: 'Cached Species Test' }]),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ usage: { key: 1 }, additionalStatus: [] }),
+        })
 
       // First call
       const results1 = await resolver.search('unique-cache-1', 10)
@@ -308,13 +317,23 @@ describe('TaxonomyResolver', () => {
       // Second call should use cache
       const results2 = await resolver.search('unique-cache-1', 10)
 
-      // Should only have made 1 fetch call total (for first search)
-      expect(global.fetch).toHaveBeenCalledTimes(1)
+      // Should have made 2 fetch calls for first search (suggest + match for enrichment)
+      // Second search uses cache, so no additional calls
+      expect(global.fetch).toHaveBeenCalledTimes(2)
       expect(results1).toEqual(results2)
     })
 
     it('makes new request after TTL expires', async () => {
-      mockFetch([{ key: 1, scientificName: 'TTL Test Species' }])
+      // Mock both suggest and match API calls
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ key: 1, scientificName: 'TTL Test Species' }]),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ usage: { key: 1 }, additionalStatus: [] }),
+        })
 
       // First call
       await resolver.search('unique-cache-2', 10)
@@ -322,17 +341,22 @@ describe('TaxonomyResolver', () => {
       // Advance time past TTL (30 minutes)
       vi.advanceTimersByTime(31 * 60 * 1000)
 
-      // Setup new mock for second call
+      // Setup new mock for second call (suggest + match)
       global.fetch = vi.fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([{ key: 2, scientificName: 'New Species' }])
+          json: () => Promise.resolve([{ key: 2, scientificName: 'New Species' }]),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ usage: { key: 2 }, additionalStatus: [] }),
         })
 
       // Second call after TTL should make new requests
       await resolver.search('unique-cache-2', 10)
 
-      expect(global.fetch).toHaveBeenCalledTimes(1)
+      // Should have made 2 fetch calls (suggest + match for enrichment)
+      expect(global.fetch).toHaveBeenCalledTimes(2)
     })
   })
 })
