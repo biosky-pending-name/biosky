@@ -1,7 +1,23 @@
 import { useState, FormEvent } from "react";
-import { IdentificationService, type ConfidenceLevel } from "../../lib/identification";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Stack,
+  Paper,
+} from "@mui/material";
+import CheckIcon from "@mui/icons-material/Check";
+import EditIcon from "@mui/icons-material/Edit";
+import {
+  IdentificationService,
+  type ConfidenceLevel,
+} from "../../lib/identification";
 import type { AtpAgent } from "@atproto/api";
-import styles from "./IdentificationPanel.module.css";
 
 interface IdentificationPanelProps {
   occurrence: {
@@ -26,7 +42,8 @@ export function IdentificationPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const service = new IdentificationService(agent);
-  const currentId = occurrence.communityId || occurrence.scientificName || "Unknown";
+  const currentId =
+    occurrence.communityId || occurrence.scientificName || "Unknown";
 
   const handleAgree = async () => {
     setIsSubmitting(true);
@@ -51,10 +68,15 @@ export function IdentificationPanel({
 
     setIsSubmitting(true);
     try {
-      await service.suggestId(occurrence.uri, occurrence.cid, taxonName.trim(), {
-        comment: comment.trim() || undefined,
-        confidence,
-      });
+      await service.suggestId(
+        occurrence.uri,
+        occurrence.cid,
+        taxonName.trim(),
+        {
+          comment: comment.trim() || undefined,
+          confidence,
+        }
+      );
       alert("Your identification has been submitted!");
       setShowSuggestForm(false);
       setTaxonName("");
@@ -68,80 +90,93 @@ export function IdentificationPanel({
   };
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.currentId}>
-        <span className={styles.label}>Community ID:</span>
-        <span className={styles.taxon}>{currentId}</span>
-      </div>
+    <Paper sx={{ mt: 3, p: 2, bgcolor: "background.paper" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Box>
+          <Typography variant="caption" color="text.secondary">
+            Community ID
+          </Typography>
+          <Typography sx={{ fontStyle: "italic", color: "primary.main" }}>
+            {currentId}
+          </Typography>
+        </Box>
+      </Stack>
 
-      <div className={styles.actions}>
-        <button
-          className={styles.btnAgree}
+      <Stack direction="row" spacing={1}>
+        <Button
+          variant="outlined"
+          color="primary"
+          startIcon={<CheckIcon />}
           onClick={handleAgree}
           disabled={isSubmitting}
         >
           Agree
-        </button>
-        <button
-          className={styles.btnSuggest}
+        </Button>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<EditIcon />}
           onClick={() => setShowSuggestForm(true)}
           disabled={isSubmitting}
         >
           Suggest Different ID
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
       {showSuggestForm && (
-        <form className={styles.suggestForm} onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="taxon-input">Scientific Name</label>
-            <input
-              type="text"
-              id="taxon-input"
-              value={taxonName}
-              onChange={(e) => setTaxonName(e.target.value)}
-              placeholder="Enter species name..."
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="comment-input">Comment (optional)</label>
-            <textarea
-              id="comment-input"
-              rows={2}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="confidence-select">Confidence</label>
-            <select
-              id="confidence-select"
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Scientific Name"
+            value={taxonName}
+            onChange={(e) => setTaxonName(e.target.value)}
+            placeholder="Enter species name..."
+            margin="normal"
+            size="small"
+          />
+
+          <TextField
+            fullWidth
+            label="Comment (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            multiline
+            rows={2}
+            margin="normal"
+            size="small"
+          />
+
+          <FormControl fullWidth margin="normal" size="small">
+            <InputLabel>Confidence</InputLabel>
+            <Select
               value={confidence}
+              label="Confidence"
               onChange={(e) => setConfidence(e.target.value as ConfidenceLevel)}
             >
-              <option value="high">High - I'm sure</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low - Best guess</option>
-            </select>
-          </div>
-          <div className={styles.formActions}>
-            <button
-              type="button"
-              className="btn btn-secondary"
+              <MenuItem value="high">High - I'm sure</MenuItem>
+              <MenuItem value="medium">Medium</MenuItem>
+              <MenuItem value="low">Low - Best guess</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
+            <Button
+              color="inherit"
               onClick={() => setShowSuggestForm(false)}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn btn-primary"
+              variant="contained"
+              color="primary"
               disabled={isSubmitting}
             >
               Submit ID
-            </button>
-          </div>
-        </form>
+            </Button>
+          </Stack>
+        </Box>
       )}
-    </div>
+    </Paper>
   );
 }

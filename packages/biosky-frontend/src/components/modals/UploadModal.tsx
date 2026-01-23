@@ -1,12 +1,34 @@
-import { useState, useEffect, FormEvent, useCallback, useRef, ChangeEvent } from "react";
+import {
+  useState,
+  useEffect,
+  FormEvent,
+  useCallback,
+  useRef,
+  ChangeEvent,
+} from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Chip,
+  Stack,
+  IconButton,
+  Alert,
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeUploadModal, addToast } from "../../store/uiSlice";
 import { resetFeed, loadInitialFeed } from "../../store/feedSlice";
-import { submitOccurrence, updateOccurrence, searchTaxa } from "../../services/api";
+import {
+  submitOccurrence,
+  updateOccurrence,
+  searchTaxa,
+} from "../../services/api";
 import type { TaxaResult } from "../../services/types";
 import { ModalOverlay } from "./ModalOverlay";
 import { ConservationStatus } from "../common/ConservationStatus";
-import styles from "./UploadModal.module.css";
 
 interface ImagePreview {
   file: File;
@@ -23,7 +45,9 @@ const QUICK_SPECIES = [
 export function UploadModal() {
   const dispatch = useAppDispatch();
   const isOpen = useAppSelector((state) => state.ui.uploadModalOpen);
-  const editingOccurrence = useAppSelector((state) => state.ui.editingOccurrence);
+  const editingOccurrence = useAppSelector(
+    (state) => state.ui.editingOccurrence
+  );
   const user = useAppSelector((state) => state.auth.user);
   const currentLocation = useAppSelector((state) => state.ui.currentLocation);
 
@@ -45,7 +69,6 @@ export function UploadModal() {
   useEffect(() => {
     if (isOpen) {
       if (editingOccurrence) {
-        // Pre-fill form with existing values when editing
         setSpecies(editingOccurrence.scientificName || "");
         setNotes(editingOccurrence.occurrenceRemarks || "");
         if (editingOccurrence.location) {
@@ -75,7 +98,6 @@ export function UploadModal() {
     setSpecies("");
     setNotes("");
     setSuggestions([]);
-    // Clean up image previews
     images.forEach((img) => URL.revokeObjectURL(img.preview));
     setImages([]);
   };
@@ -84,44 +106,44 @@ export function UploadModal() {
     const files = Array.from(e.target.files || []);
 
     for (const file of files) {
-      // Validate file type
       if (!VALID_TYPES.includes(file.type)) {
-        dispatch(addToast({
-          message: `Invalid file type: ${file.name}. Use JPG, PNG, or WebP.`,
-          type: "error"
-        }));
+        dispatch(
+          addToast({
+            message: `Invalid file type: ${file.name}. Use JPG, PNG, or WebP.`,
+            type: "error",
+          })
+        );
         continue;
       }
 
-      // Validate file size
       if (file.size > MAX_FILE_SIZE) {
-        dispatch(addToast({
-          message: `File too large: ${file.name}. Max size is 10MB.`,
-          type: "error"
-        }));
+        dispatch(
+          addToast({
+            message: `File too large: ${file.name}. Max size is 10MB.`,
+            type: "error",
+          })
+        );
         continue;
       }
 
-      // Check max images limit
       if (images.length >= MAX_IMAGES) {
-        dispatch(addToast({
-          message: `Maximum ${MAX_IMAGES} images allowed.`,
-          type: "error"
-        }));
+        dispatch(
+          addToast({
+            message: `Maximum ${MAX_IMAGES} images allowed.`,
+            type: "error",
+          })
+        );
         break;
       }
 
-      // Create preview and add to state
       const preview = URL.createObjectURL(file);
       setImages((prev) => [...prev, { file, preview }]);
 
-      // Try to extract EXIF location from first image
       if (images.length === 0 && !lat && !lng) {
         extractExifLocation(file);
       }
     }
 
-    // Reset input so same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -129,16 +151,9 @@ export function UploadModal() {
 
   const extractExifLocation = async (file: File) => {
     try {
-      // Use exif-js style extraction - simplified version
       const arrayBuffer = await file.arrayBuffer();
       const dataView = new DataView(arrayBuffer);
-
-      // Check for JPEG
       if (dataView.getUint16(0) !== 0xffd8) return;
-
-      // For now, we'll rely on a more robust library in the future
-      // This is a placeholder that demonstrates the intent
-      // Real EXIF parsing would be done with exifr or similar
     } catch (error) {
       console.error("EXIF extraction error:", error);
     }
@@ -181,14 +196,15 @@ export function UploadModal() {
     e.preventDefault();
 
     if (!lat || !lng) {
-      dispatch(addToast({ message: "Please provide a location", type: "error" }));
+      dispatch(
+        addToast({ message: "Please provide a location", type: "error" })
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Convert images to base64 for upload
       const imageData: Array<{ data: string; mimeType: string }> = [];
       for (const img of images) {
         const base64 = await fileToBase64(img.file);
@@ -199,7 +215,6 @@ export function UploadModal() {
       }
 
       if (isEditMode && editingOccurrence) {
-        // Update existing occurrence (images not supported in edit yet)
         await updateOccurrence({
           uri: editingOccurrence.uri,
           scientificName: species || "Unknown species",
@@ -208,9 +223,13 @@ export function UploadModal() {
           notes: notes || undefined,
           eventDate: editingOccurrence.eventDate || new Date().toISOString(),
         });
-        dispatch(addToast({ message: "Occurrence updated successfully!", type: "success" }));
+        dispatch(
+          addToast({
+            message: "Occurrence updated successfully!",
+            type: "success",
+          })
+        );
       } else {
-        // Create new occurrence with images
         await submitOccurrence({
           scientificName: species || "Unknown species",
           latitude: parseFloat(lat),
@@ -219,7 +238,12 @@ export function UploadModal() {
           eventDate: new Date().toISOString(),
           images: imageData.length > 0 ? imageData : undefined,
         });
-        dispatch(addToast({ message: "Occurrence submitted successfully!", type: "success" }));
+        dispatch(
+          addToast({
+            message: "Occurrence submitted successfully!",
+            type: "success",
+          })
+        );
       }
 
       handleClose();
@@ -242,7 +266,6 @@ export function UploadModal() {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
         const base64 = result.split(",")[1];
         resolve(base64);
       };
@@ -251,145 +274,224 @@ export function UploadModal() {
     });
   };
 
-  const locationDisplay = lat && lng ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : "Getting location...";
+  const locationDisplay =
+    lat && lng
+      ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`
+      : "Getting location...";
 
   return (
     <ModalOverlay isOpen={isOpen} onClose={handleClose}>
       {user && (
-        <div className={styles.authBanner}>
+        <Alert severity="success" sx={{ mb: 2, mx: -1, mt: -1 }}>
           Posting as {user.handle ? `@${user.handle}` : user.did}
-        </div>
+        </Alert>
       )}
-      <h2>{isEditMode ? "Edit Occurrence" : "New Occurrence"}</h2>
+
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+        {isEditMode ? "Edit Occurrence" : "New Occurrence"}
+      </Typography>
+
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="species-input">Species</label>
-          <input
-            type="text"
-            id="species-input"
-            value={species}
-            onChange={(e) => handleSpeciesChange(e.target.value)}
-            placeholder="e.g. Eschscholzia californica"
-            autoComplete="off"
-          />
-          <div className={styles.quickSpecies}>
-            {QUICK_SPECIES.map((s) => (
-              <button
-                key={s.name}
-                type="button"
-                onClick={() => handleQuickSpecies(s.name)}
+        <TextField
+          fullWidth
+          label="Species"
+          value={species}
+          onChange={(e) => handleSpeciesChange(e.target.value)}
+          placeholder="e.g. Eschscholzia californica"
+          autoComplete="off"
+          margin="normal"
+        />
+
+        <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
+          {QUICK_SPECIES.map((s) => (
+            <Chip
+              key={s.name}
+              label={s.label}
+              size="small"
+              onClick={() => handleQuickSpecies(s.name)}
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  bgcolor: "background.paper",
+                },
+              }}
+              variant="outlined"
+            />
+          ))}
+        </Stack>
+
+        {suggestions.length > 0 && (
+          <Stack spacing={0.5} sx={{ mt: 1 }}>
+            {suggestions.map((s) => (
+              <Box
+                key={s.scientificName}
+                onClick={() => handleSuggestionClick(s.scientificName)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1.5,
+                  bgcolor: "background.default",
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  "&:hover": {
+                    bgcolor: "divider",
+                    borderColor: "primary.main",
+                  },
+                }}
               >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          {suggestions.length > 0 && (
-            <div className={styles.suggestions}>
-              {suggestions.map((s) => (
-                <div
-                  key={s.scientificName}
-                  className={styles.suggestion}
-                  onClick={() => handleSuggestionClick(s.scientificName)}
-                >
-                  {s.photoUrl && (
-                    <img
-                      src={s.photoUrl}
-                      alt=""
-                      className={styles.suggestionPhoto}
-                    />
+                {s.photoUrl && (
+                  <Box
+                    component="img"
+                    src={s.photoUrl}
+                    alt=""
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    <Typography fontWeight={600}>{s.scientificName}</Typography>
+                    {s.conservationStatus && (
+                      <ConservationStatus status={s.conservationStatus} size="sm" />
+                    )}
+                  </Stack>
+                  {s.commonName && (
+                    <Typography variant="caption" color="text.disabled">
+                      {s.commonName}
+                    </Typography>
                   )}
-                  <div className={styles.suggestionText}>
-                    <div className={styles.suggestionHeader}>
-                      <strong>{s.scientificName}</strong>
-                      {s.conservationStatus && (
-                        <ConservationStatus status={s.conservationStatus} size="sm" />
-                      )}
-                    </div>
-                    {s.commonName && <span>{s.commonName}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="notes-input">Notes (optional)</label>
-          <textarea
-            id="notes-input"
-            rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Describe what you observed..."
-          />
-        </div>
-        <div className="form-group">
-          <label>Photos (optional)</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            onChange={handleImageSelect}
-            style={{ display: "none" }}
-          />
-          {images.length > 0 && (
-            <div className={styles.imagePreviews}>
-              {images.map((img, index) => (
-                <div key={index} className={styles.imagePreview}>
-                  <img src={img.preview} alt={`Preview ${index + 1}`} />
-                  <button
-                    type="button"
-                    className={styles.removeImage}
-                    onClick={() => handleRemoveImage(index)}
-                    aria-label="Remove image"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {images.length < MAX_IMAGES && (
-            <button
-              type="button"
-              className={styles.uploadButton}
-              onClick={handleUploadClick}
-            >
-              {images.length === 0 ? "Add photos" : "Add more photos"}
-            </button>
-          )}
-          <div className={styles.uploadHint}>
-            JPG, PNG, or WebP • Max 10MB each • Up to {MAX_IMAGES} photos
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Location (from map center)</label>
-          <input type="text" value={locationDisplay} readOnly />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            justifyContent: "flex-end",
-          }}
-        >
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleClose}
+                </Box>
+              </Box>
+            ))}
+          </Stack>
+        )}
+
+        <TextField
+          fullWidth
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Describe what you observed..."
+          multiline
+          rows={2}
+          margin="normal"
+        />
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+          Photos (optional)
+        </Typography>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={handleImageSelect}
+          style={{ display: "none" }}
+        />
+
+        {images.length > 0 && (
+          <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap", gap: 1 }}>
+            {images.map((img, index) => (
+              <Box
+                key={index}
+                sx={{
+                  position: "relative",
+                  width: 80,
+                  height: 80,
+                  borderRadius: 1,
+                  overflow: "hidden",
+                  border: 1,
+                  borderColor: "divider",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={img.preview}
+                  alt={`Preview ${index + 1}`}
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => handleRemoveImage(index)}
+                  aria-label="Remove image"
+                  sx={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    bgcolor: "rgba(0, 0, 0, 0.7)",
+                    color: "white",
+                    width: 20,
+                    height: 20,
+                    "&:hover": { bgcolor: "error.main" },
+                  }}
+                >
+                  <CloseIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Box>
+            ))}
+          </Stack>
+        )}
+
+        {images.length < MAX_IMAGES && (
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleUploadClick}
+            startIcon={<AddPhotoAlternateIcon />}
+            sx={{
+              borderStyle: "dashed",
+              color: "text.disabled",
+              "&:hover": {
+                borderColor: "primary.main",
+                color: "primary.main",
+              },
+            }}
           >
+            {images.length === 0 ? "Add photos" : "Add more photos"}
+          </Button>
+        )}
+
+        <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.5 }}>
+          JPG, PNG, or WebP - Max 10MB each - Up to {MAX_IMAGES} photos
+        </Typography>
+
+        <TextField
+          fullWidth
+          label="Location (from map center)"
+          value={locationDisplay}
+          InputProps={{ readOnly: true }}
+          margin="normal"
+        />
+
+        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
+          <Button onClick={handleClose} color="inherit">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn btn-primary"
+            variant="contained"
+            color="primary"
             disabled={isSubmitting}
           >
             {isSubmitting
-              ? isEditMode ? "Saving..." : "Submitting..."
-              : isEditMode ? "Save Changes" : "Submit"}
-          </button>
-        </div>
+              ? isEditMode
+                ? "Saving..."
+                : "Submitting..."
+              : isEditMode
+                ? "Save Changes"
+                : "Submit"}
+          </Button>
+        </Stack>
       </form>
     </ModalOverlay>
   );

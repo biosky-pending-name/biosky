@@ -1,32 +1,30 @@
-import type { ReactNode, MouseEvent } from "react";
-import styles from "./ModalOverlay.module.css";
+import type { ReactNode } from "react";
+import { Dialog, DialogContent } from "@mui/material";
 
 interface ModalOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
-  maxWidth?: string;
+  maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
 }
 
 export function ModalOverlay({
   isOpen,
   onClose,
   children,
-  maxWidth,
+  maxWidth = "sm",
 }: ModalOverlayProps) {
-  if (!isOpen) return null;
-
-  const handleOverlayClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   return (
-    <div className={styles.overlay} onClick={handleOverlayClick}>
-      <div className={styles.modal} style={maxWidth ? { maxWidth } : undefined}>
-        {children}
-      </div>
-    </div>
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth={maxWidth}
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: "90vh" },
+      }}
+    >
+      <DialogContent sx={{ p: 3 }}>{children}</DialogContent>
+    </Dialog>
   );
 }

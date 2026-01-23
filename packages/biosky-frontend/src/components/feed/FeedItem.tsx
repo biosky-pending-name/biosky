@@ -1,10 +1,20 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import {
+  Box,
+  Avatar,
+  Typography,
+  IconButton,
+  Menu,
+  MenuItem,
+  CardMedia,
+  Stack,
+} from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Occurrence } from "../../services/types";
 import type { RootState } from "../../store";
 import { getImageUrl } from "../../services/api";
-import styles from "./FeedItem.module.css";
 
 interface FeedItemProps {
   occurrence: Occurrence;
@@ -27,8 +37,8 @@ function formatTimeAgo(date: Date): string {
 }
 
 export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(anchorEl);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const isOwnPost = currentUser?.did === occurrence.observer.did;
 
@@ -49,90 +59,141 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
   const occurrenceUrl = `/occurrence/${encodeURIComponent(occurrence.uri)}`;
   const pdslsUrl = getPdslsUrl(occurrence.uri);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [menuOpen]);
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleMenuClose();
+    onEdit?.(occurrence);
+  };
 
   return (
-    <Link to={occurrenceUrl} className={styles.item}>
-      <div className={styles.avatar}>
-        {occurrence.observer.avatar && (
-          <img src={occurrence.observer.avatar} alt={displayName} />
-        )}
-      </div>
-      <div className={styles.body}>
-        <div className={styles.header}>
-          <Link
+    <Box
+      component={Link}
+      to={occurrenceUrl}
+      sx={{
+        display: "flex",
+        gap: 1.5,
+        p: 2,
+        borderBottom: 1,
+        borderColor: "divider",
+        textDecoration: "none",
+        color: "inherit",
+        "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
+      }}
+    >
+      <Avatar
+        src={occurrence.observer.avatar}
+        alt={displayName}
+        sx={{ width: 48, height: 48 }}
+      />
+
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Stack direction="row" alignItems="baseline" spacing={1} flexWrap="wrap">
+          <Typography
+            component={Link}
             to={`/profile/${encodeURIComponent(occurrence.observer.did)}`}
-            className={styles.name}
             onClick={(e) => e.stopPropagation()}
+            sx={{
+              fontWeight: 600,
+              color: "text.primary",
+              textDecoration: "none",
+              "&:hover": { textDecoration: "underline" },
+            }}
           >
             {displayName}
-          </Link>
-          {handle && <span className={styles.handle}>{handle}</span>}
-          <span className={styles.time}>{timeAgo}</span>
-          <div className={styles.menuWrapper} ref={menuRef}>
-            <button
-              className={styles.menuButton}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setMenuOpen(!menuOpen);
-              }}
+          </Typography>
+          {handle && (
+            <Typography variant="body2" color="text.disabled">
+              {handle}
+            </Typography>
+          )}
+          <Typography variant="body2" color="text.disabled">
+            {timeAgo}
+          </Typography>
+          <Box sx={{ ml: "auto" }}>
+            <IconButton
+              size="small"
+              onClick={handleMenuOpen}
               aria-label="More options"
+              sx={{ color: "text.disabled" }}
             >
-              ⋮
-            </button>
-            {menuOpen && (
-              <div className={styles.dropdown}>
-                {isOwnPost && onEdit && (
-                  <button
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      onEdit(occurrence);
-                    }}
-                  >
-                    Edit
-                  </button>
-                )}
-                <a
-                  href={pdslsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.dropdownItem}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  View on AT Protocol
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className={styles.species}>{species}</div>
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={menuOpen}
+              onClose={handleMenuClose}
+              onClick={(e) => e.stopPropagation()}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              {isOwnPost && onEdit && (
+                <MenuItem onClick={handleEditClick}>Edit</MenuItem>
+              )}
+              <MenuItem
+                component="a"
+                href={pdslsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                View on AT Protocol
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Stack>
+
+        <Typography
+          sx={{
+            fontStyle: "italic",
+            color: "primary.main",
+            my: 0.5,
+            fontSize: "1.1rem",
+          }}
+        >
+          {species}
+        </Typography>
+
         {occurrence.occurrenceRemarks && (
-          <div className={styles.notes}>{occurrence.occurrenceRemarks}</div>
+          <Typography
+            variant="body2"
+            sx={{ color: "#ccc", lineHeight: 1.4, my: 0.5 }}
+          >
+            {occurrence.occurrenceRemarks}
+          </Typography>
         )}
+
         {occurrence.verbatimLocality && (
-          <div className={styles.location}>{occurrence.verbatimLocality}</div>
+          <Typography variant="body2" color="text.disabled" sx={{ mt: 0.5 }}>
+            {occurrence.verbatimLocality}
+          </Typography>
         )}
+
         {imageUrl && (
-          <div className={styles.image}>
-            <img src={imageUrl} alt={species} loading="lazy" />
-          </div>
+          <CardMedia
+            component="img"
+            image={imageUrl}
+            alt={species}
+            loading="lazy"
+            sx={{
+              mt: 1.5,
+              borderRadius: 2,
+              maxHeight: 300,
+              objectFit: "cover",
+            }}
+          />
         )}
-      </div>
-    </Link>
+      </Box>
+    </Box>
   );
 }

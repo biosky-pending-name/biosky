@@ -1,12 +1,26 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import {
+  Box,
+  Container,
+  Avatar,
+  Typography,
+  Tabs,
+  Tab,
+  Button,
+  CircularProgress,
+  Stack,
+  Card,
+  CardMedia,
+  Chip,
+} from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { fetchProfileFeed, getImageUrl } from "../../services/api";
 import type {
   ProfileFeedResponse,
   Occurrence,
   Identification,
 } from "../../services/types";
-import styles from "./ProfileView.module.css";
 
 type ProfileTab = "all" | "observations" | "identifications";
 
@@ -75,150 +89,226 @@ export function ProfileView() {
   }, [did, activeTab]);
 
   if (!did) {
-    return <div className={styles.container}>Profile not found</div>;
+    return (
+      <Container maxWidth="sm" sx={{ p: 4 }}>
+        <Typography color="text.secondary">Profile not found</Typography>
+      </Container>
+    );
   }
 
   if (error) {
-    return <div className={styles.container}>{error}</div>;
+    return (
+      <Container maxWidth="sm" sx={{ p: 4 }}>
+        <Typography color="error">{error}</Typography>
+      </Container>
+    );
   }
 
   const profile = data?.profile;
   const counts = data?.counts;
 
   return (
-    <div className={styles.container}>
+    <Container
+      maxWidth="sm"
+      disableGutters
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "auto",
+        borderLeft: { sm: "1px solid #333" },
+        borderRight: { sm: "1px solid #333" },
+      }}
+    >
       {/* Profile Header */}
-      <div className={styles.header}>
-        <div className={styles.avatar}>
-          {profile?.avatar ? (
-            <img src={profile.avatar} alt={profile.displayName || profile.handle || did} />
-          ) : (
-            <div className={styles.avatarPlaceholder} />
-          )}
-        </div>
-        <div className={styles.info}>
-          <h1 className={styles.displayName}>
-            {profile?.displayName || profile?.handle || did.slice(0, 20)}
-          </h1>
-          {profile?.handle && (
-            <div className={styles.handle}>@{profile.handle}</div>
-          )}
-        </div>
-      </div>
+      <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Avatar
+            src={profile?.avatar}
+            alt={profile?.displayName || profile?.handle || did}
+            sx={{ width: 80, height: 80 }}
+          />
+          <Box>
+            <Typography variant="h5" fontWeight={600}>
+              {profile?.displayName || profile?.handle || did.slice(0, 20)}
+            </Typography>
+            {profile?.handle && (
+              <Typography color="text.disabled">@{profile.handle}</Typography>
+            )}
+          </Box>
+        </Stack>
 
-      {/* Stats */}
-      {counts && (
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>{counts.observations}</span>
-            <span className={styles.statLabel}>Observations</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>{counts.identifications}</span>
-            <span className={styles.statLabel}>IDs</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>{counts.species}</span>
-            <span className={styles.statLabel}>Species</span>
-          </div>
-        </div>
-      )}
+        {/* Stats */}
+        {counts && (
+          <Stack direction="row" spacing={4} sx={{ mt: 2 }}>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h6" fontWeight={600}>
+                {counts.observations}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Observations
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h6" fontWeight={600}>
+                {counts.identifications}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                IDs
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h6" fontWeight={600}>
+                {counts.species}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Species
+              </Typography>
+            </Box>
+          </Stack>
+        )}
 
-      {/* AT Protocol Link */}
-      <a
-        href={`https://pdsls.dev/at://${did}/org.rwell.test.occurrence`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.atprotoLink}
-      >
-        View records on AT Protocol ↗
-      </a>
+        {/* AT Protocol Link */}
+        <Button
+          component="a"
+          href={`https://pdsls.dev/at://${did}/org.rwell.test.occurrence`}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="outlined"
+          size="small"
+          endIcon={<OpenInNewIcon />}
+          sx={{ mt: 2 }}
+        >
+          View on AT Protocol
+        </Button>
+      </Box>
 
       {/* Tabs */}
-      <div className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === "all" ? styles.active : ""}`}
-          onClick={() => setActiveTab("all")}
-        >
-          All
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === "observations" ? styles.active : ""}`}
-          onClick={() => setActiveTab("observations")}
-        >
-          Observations
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === "identifications" ? styles.active : ""}`}
-          onClick={() => setActiveTab("identifications")}
-        >
-          IDs
-        </button>
-      </div>
+      <Tabs
+        value={activeTab}
+        onChange={(_, tab) => setActiveTab(tab)}
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+          "& .MuiTab-root": { flex: 1, minWidth: 0 },
+        }}
+      >
+        <Tab label="All" value="all" />
+        <Tab label="Observations" value="observations" />
+        <Tab label="IDs" value="identifications" />
+      </Tabs>
 
       {/* Feed */}
-      <div className={styles.feed}>
+      <Box sx={{ flex: 1 }}>
         {(activeTab === "all" || activeTab === "observations") &&
           occurrences.map((occ) => (
-            <Link
+            <Box
               key={occ.uri}
+              component={Link}
               to={`/occurrence/${encodeURIComponent(occ.uri)}`}
-              className={styles.item}
+              sx={{
+                display: "block",
+                p: 2,
+                borderBottom: 1,
+                borderColor: "divider",
+                textDecoration: "none",
+                color: "inherit",
+                "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
+              }}
             >
-              <div className={styles.itemType}>Observation</div>
-              <div className={styles.itemContent}>
-                <div className={styles.species}>
-                  {occ.communityId || occ.scientificName || "Unknown species"}
-                </div>
+              <Chip label="Observation" size="small" sx={{ mb: 1 }} />
+              <Stack direction="row" spacing={2} alignItems="flex-start">
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    sx={{
+                      fontStyle: "italic",
+                      color: "primary.main",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {occ.communityId || occ.scientificName || "Unknown species"}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled">
+                    {formatTimeAgo(new Date(occ.createdAt))}
+                    {occ.verbatimLocality && ` · ${occ.verbatimLocality}`}
+                  </Typography>
+                </Box>
                 {occ.images[0] && (
-                  <img
+                  <Box
+                    component="img"
                     src={getImageUrl(occ.images[0])}
                     alt=""
-                    className={styles.thumbnail}
                     loading="lazy"
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 1,
+                      objectFit: "cover",
+                    }}
                   />
                 )}
-                <div className={styles.itemMeta}>
-                  {formatTimeAgo(new Date(occ.createdAt))}
-                  {occ.verbatimLocality && ` · ${occ.verbatimLocality}`}
-                </div>
-              </div>
-            </Link>
+              </Stack>
+            </Box>
           ))}
 
         {(activeTab === "all" || activeTab === "identifications") &&
           identifications.map((id) => (
-            <Link
+            <Box
               key={id.uri}
+              component={Link}
               to={`/occurrence/${encodeURIComponent(id.subject_uri)}`}
-              className={styles.item}
+              sx={{
+                display: "block",
+                p: 2,
+                borderBottom: 1,
+                borderColor: "divider",
+                textDecoration: "none",
+                color: "inherit",
+                "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
+              }}
             >
-              <div className={styles.itemType}>Identification</div>
-              <div className={styles.itemContent}>
-                <div className={styles.species}>{id.scientific_name}</div>
-                {id.identification_remarks && (
-                  <div className={styles.remarks}>{id.identification_remarks}</div>
-                )}
-                <div className={styles.itemMeta}>
-                  {formatTimeAgo(new Date(id.date_identified))}
-                  {id.is_agreement && " · Agrees"}
-                </div>
-              </div>
-            </Link>
+              <Chip label="Identification" size="small" sx={{ mb: 1 }} />
+              <Typography
+                sx={{
+                  fontStyle: "italic",
+                  color: "primary.main",
+                  fontWeight: 500,
+                }}
+              >
+                {id.scientific_name}
+              </Typography>
+              {id.identification_remarks && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {id.identification_remarks}
+                </Typography>
+              )}
+              <Typography variant="caption" color="text.disabled">
+                {formatTimeAgo(new Date(id.date_identified))}
+                {id.is_agreement && " · Agrees"}
+              </Typography>
+            </Box>
           ))}
 
-        {isLoading && <div className={styles.loading}>Loading...</div>}
+        {isLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+            <CircularProgress color="primary" />
+          </Box>
+        )}
 
         {!isLoading && occurrences.length === 0 && identifications.length === 0 && (
-          <div className={styles.empty}>No activity yet</div>
+          <Box sx={{ p: 4, textAlign: "center" }}>
+            <Typography color="text.secondary">No activity yet</Typography>
+          </Box>
         )}
 
         {hasMore && !isLoading && (
-          <button className={styles.loadMore} onClick={() => loadData(true)}>
-            Load more
-          </button>
+          <Box sx={{ p: 2, textAlign: "center" }}>
+            <Button variant="outlined" onClick={() => loadData(true)}>
+              Load more
+            </Button>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 }

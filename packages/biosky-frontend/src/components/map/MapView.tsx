@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { Box } from "@mui/material";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchOccurrencesGeoJSON, fetchOccurrence, getImageUrl } from "../../services/api";
+import {
+  fetchOccurrencesGeoJSON,
+  fetchOccurrence,
+  getImageUrl,
+} from "../../services/api";
 import type { Occurrence } from "../../services/types";
-import styles from "./MapView.module.css";
 
 export function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -113,7 +117,9 @@ export function MapView() {
         layers: ["clusters"],
       });
       const clusterId = features[0].properties?.cluster_id;
-      const source = mapInstance.getSource("occurrences") as maplibregl.GeoJSONSource;
+      const source = mapInstance.getSource(
+        "occurrences"
+      ) as maplibregl.GeoJSONSource;
       try {
         const zoom = await source.getClusterExpansionZoom(clusterId);
         const geometry = features[0].geometry;
@@ -139,7 +145,11 @@ export function MapView() {
       const result = await fetchOccurrence(props?.uri);
       if (!result) return;
 
-      showPopup(mapInstance, result.occurrence, geometry.coordinates as [number, number]);
+      showPopup(
+        mapInstance,
+        result.occurrence,
+        geometry.coordinates as [number, number]
+      );
     });
 
     mapInstance.on("mouseenter", "clusters", () => {
@@ -167,9 +177,9 @@ export function MapView() {
   }, [isInitialized]);
 
   return (
-    <div className={styles.container}>
-      <div ref={mapContainer} className={styles.map} />
-    </div>
+    <Box sx={{ flex: 1, position: "relative" }}>
+      <Box ref={mapContainer} sx={{ width: "100%", height: "100%" }} />
+    </Box>
   );
 }
 

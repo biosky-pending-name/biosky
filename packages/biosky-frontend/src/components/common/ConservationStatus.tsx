@@ -1,5 +1,8 @@
-import type { IUCNCategory, ConservationStatus as ConservationStatusType } from "../../services/types";
-import styles from "./ConservationStatus.module.css";
+import { Chip } from "@mui/material";
+import type {
+  IUCNCategory,
+  ConservationStatus as ConservationStatusType,
+} from "../../services/types";
 
 interface ConservationStatusProps {
   status: ConservationStatusType;
@@ -35,17 +38,20 @@ export function ConservationStatus({
   const needsDarkText = ["VU", "NT", "LC", "DD", "NE"].includes(status.category);
 
   return (
-    <span
-      className={`${styles.badge} ${styles[size]}`}
-      style={{
+    <Chip
+      label={showLabel ? info.label : status.category}
+      size={size === "sm" ? "small" : "medium"}
+      sx={{
         backgroundColor: info.color,
         color: needsDarkText ? "#1a1a1a" : "#ffffff",
         borderColor: status.category === "NE" ? "#d1d1c6" : info.color,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.025em",
+        fontSize: size === "sm" ? "0.625rem" : "0.75rem",
       }}
       title={`${info.label} (IUCN Red List)`}
-    >
-      {showLabel ? info.label : status.category}
-    </span>
+    />
   );
 }
 

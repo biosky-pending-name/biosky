@@ -1,6 +1,7 @@
+import { Fab } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { openUploadModal } from "../../store/uiSlice";
-import styles from "./FAB.module.css";
 
 export function FAB() {
   const dispatch = useAppDispatch();
@@ -16,12 +17,21 @@ export function FAB() {
   };
 
   return (
-    <button
-      className={styles.fab}
+    <Fab
+      color="primary"
       onClick={handleClick}
       title="New occurrence"
+      sx={{
+        position: "fixed",
+        bottom: 80,
+        right: 16,
+        zIndex: 100,
+        "@media (min-width: 640px)": {
+          right: "calc(50% - 328px)",
+        },
+      }}
     >
-      +
-    </button>
+      <AddIcon />
+    </Fab>
   );
 }

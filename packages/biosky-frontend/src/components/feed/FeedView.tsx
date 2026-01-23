@@ -1,16 +1,15 @@
 import { useEffect, useRef, useCallback } from "react";
+import { Box, Container, Tabs, Tab, Typography, Button, CircularProgress } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { loadFeed, loadInitialFeed, switchTab } from "../../store/feedSlice";
 import { openEditModal } from "../../store/uiSlice";
 import type { FeedTab, Occurrence } from "../../services/types";
 import { FeedItem } from "./FeedItem";
-import styles from "./FeedView.module.css";
 
 export function FeedView() {
   const dispatch = useAppDispatch();
-  const { occurrences, isLoading, currentTab, hasMore, homeFeedMeta } = useAppSelector(
-    (state) => state.feed
-  );
+  const { occurrences, isLoading, currentTab, hasMore, homeFeedMeta } =
+    useAppSelector((state) => state.feed);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,62 +25,100 @@ export function FeedView() {
     }
   }, [dispatch, isLoading, hasMore]);
 
-  const handleTabClick = (tab: FeedTab) => {
+  const handleTabClick = (_: React.SyntheticEvent, tab: FeedTab) => {
     if (tab !== currentTab) {
       dispatch(switchTab(tab));
     }
   };
 
-  const handleEdit = useCallback((occurrence: Occurrence) => {
-    dispatch(openEditModal(occurrence));
-  }, [dispatch]);
+  const handleEdit = useCallback(
+    (occurrence: Occurrence) => {
+      dispatch(openEditModal(occurrence));
+    },
+    [dispatch]
+  );
 
   return (
-    <div className={styles.container}>
-      <nav className={styles.tabs}>
-        <button
-          className={`${styles.tabBtn} ${currentTab === "home" ? styles.active : ""}`}
-          onClick={() => handleTabClick("home")}
-        >
-          Home
-        </button>
-        <button
-          className={`${styles.tabBtn} ${currentTab === "explore" ? styles.active : ""}`}
-          onClick={() => handleTabClick("explore")}
-        >
-          Explore
-        </button>
-      </nav>
-      <div className={styles.content} ref={contentRef} onScroll={handleScroll}>
-        <div className={styles.list}>
+    <Container
+      maxWidth="sm"
+      disableGutters
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderLeft: { sm: "1px solid #333" },
+        borderRight: { sm: "1px solid #333" },
+      }}
+    >
+      <Tabs
+        value={currentTab}
+        onChange={handleTabClick}
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          "& .MuiTab-root": { flex: 1, minWidth: 0 },
+        }}
+      >
+        <Tab label="Home" value="home" />
+        <Tab label="Explore" value="explore" />
+      </Tabs>
+
+      <Box
+        ref={contentRef}
+        onScroll={handleScroll}
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+      >
+        <Box>
           {occurrences.map((occ) => (
             <FeedItem key={occ.uri} occurrence={occ} onEdit={handleEdit} />
           ))}
-        </div>
-        {isLoading && <div className={styles.loading}>Loading...</div>}
+        </Box>
+
+        {isLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+            <CircularProgress color="primary" />
+          </Box>
+        )}
+
         {!isLoading && occurrences.length === 0 && (
-          <div className={styles.empty}>
+          <Box sx={{ p: 4, textAlign: "center" }}>
             {currentTab === "home" ? (
               <>
-                <p>No observations from people you follow yet.</p>
+                <Typography color="text.secondary" sx={{ mb: 1 }}>
+                  No observations from people you follow yet.
+                </Typography>
                 {homeFeedMeta && homeFeedMeta.totalFollows > 0 && (
-                  <p className={styles.emptyHint}>
-                    You follow {homeFeedMeta.totalFollows} people, but none have posted observations.
-                  </p>
+                  <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
+                    You follow {homeFeedMeta.totalFollows} people, but none have
+                    posted observations.
+                  </Typography>
                 )}
-                <button
-                  className={styles.switchTabBtn}
-                  onClick={() => handleTabClick("explore")}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => dispatch(switchTab("explore"))}
                 >
                   Browse all observations
-                </button>
+                </Button>
               </>
             ) : (
-              "No occurrences yet. Be the first to post!"
+              <Typography color="text.secondary">
+                No occurrences yet. Be the first to post!
+              </Typography>
             )}
-          </div>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 }

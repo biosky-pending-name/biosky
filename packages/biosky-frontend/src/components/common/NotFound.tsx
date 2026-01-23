@@ -1,31 +1,28 @@
 import { Link } from "react-router-dom";
+import { Box, Typography, Button } from "@mui/material";
 
 export function NotFound() {
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         flex: 1,
-        padding: "2rem",
+        p: 4,
         textAlign: "center",
       }}
     >
-      <h1 style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>404</h1>
-      <p
-        style={{
-          color: "var(--color-text-secondary)",
-          marginBottom: "1.5rem",
-          fontSize: "1.125rem",
-        }}
-      >
+      <Typography variant="h1" sx={{ fontSize: "4rem", mb: 1 }}>
+        404
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 3, fontSize: "1.125rem" }}>
         Page not found
-      </p>
-      <Link to="/" className="btn btn-primary">
+      </Typography>
+      <Button component={Link} to="/" variant="contained" color="primary">
         Go home
-      </Link>
-    </div>
+      </Button>
+    </Box>
   );
 }

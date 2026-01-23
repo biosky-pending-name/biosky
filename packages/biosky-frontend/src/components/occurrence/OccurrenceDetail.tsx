@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  Box,
+  Container,
+  Typography,
+  Avatar,
+  Button,
+  CircularProgress,
+  Stack,
+  Paper,
+  IconButton,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { fetchOccurrence, getImageUrl } from "../../services/api";
 import { useAppSelector } from "../../store";
 import type { Occurrence } from "../../services/types";
 import { IdentificationPanel } from "../identification/IdentificationPanel";
 import type { AtpAgent } from "@atproto/api";
-import styles from "./OccurrenceDetail.module.css";
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -25,13 +36,9 @@ export function OccurrenceDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  // Note: In a full implementation, you would get the agent from context or create it
-  // For now, we'll show the identification panel only when logged in
   const [agent, setAgent] = useState<AtpAgent | null>(null);
 
   useEffect(() => {
-    console.log("OccurrenceDetail - uri param:", uri);
     if (!uri) {
       setError("No occurrence URI provided");
       setLoading(false);
@@ -39,14 +46,12 @@ export function OccurrenceDetail() {
     }
 
     const decodedUri = decodeURIComponent(uri);
-    console.log("OccurrenceDetail - decoded uri:", decodedUri);
 
     async function loadOccurrence() {
       setLoading(true);
       setError(null);
 
       const result = await fetchOccurrence(decodedUri);
-      console.log("OccurrenceDetail - fetch result:", result);
       if (result?.occurrence) {
         setOccurrence(result.occurrence);
       } else {
@@ -67,7 +72,6 @@ export function OccurrenceDetail() {
   };
 
   const handleIdentificationSuccess = async () => {
-    // Reload the occurrence to get updated community ID
     if (uri) {
       const result = await fetchOccurrence(decodeURIComponent(uri));
       if (result?.occurrence) {
@@ -78,22 +82,25 @@ export function OccurrenceDetail() {
 
   if (loading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loading}>Loading occurrence...</div>
-      </div>
+      <Container maxWidth="sm" sx={{ p: 4, textAlign: "center" }}>
+        <CircularProgress color="primary" />
+        <Typography color="text.secondary" sx={{ mt: 2 }}>
+          Loading occurrence...
+        </Typography>
+      </Container>
     );
   }
 
   if (error || !occurrence) {
     return (
-      <div className={styles.container}>
-        <div className={styles.error}>
-          <p>{error || "Occurrence not found"}</p>
-          <button className="btn btn-secondary" onClick={handleBack}>
-            Go Back
-          </button>
-        </div>
-      </div>
+      <Container maxWidth="sm" sx={{ p: 4, textAlign: "center" }}>
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error || "Occurrence not found"}
+        </Typography>
+        <Button variant="outlined" onClick={handleBack}>
+          Go Back
+        </Button>
+      </Container>
     );
   }
 
@@ -108,101 +115,178 @@ export function OccurrenceDetail() {
     occurrence.communityId || occurrence.scientificName || "Unknown species";
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <button className={styles.backButton} onClick={handleBack}>
-          ← Back
-        </button>
-      </header>
+    <Container
+      maxWidth="sm"
+      disableGutters
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "auto",
+        borderLeft: { sm: "1px solid #333" },
+        borderRight: { sm: "1px solid #333" },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          p: 1.5,
+          borderBottom: 1,
+          borderColor: "divider",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <IconButton onClick={handleBack} sx={{ mr: 1 }}>
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="subtitle1" fontWeight={500}>
+          Observation
+        </Typography>
+      </Box>
 
+      {/* Images */}
       {occurrence.images.length > 0 && (
-        <div className={styles.imageSection}>
-          <div className={styles.mainImage}>
-            <img
-              src={getImageUrl(occurrence.images[activeImageIndex])}
-              alt={species}
-            />
-          </div>
+        <Box sx={{ bgcolor: "background.default" }}>
+          <Box
+            component="img"
+            src={getImageUrl(occurrence.images[activeImageIndex])}
+            alt={species}
+            sx={{
+              width: "100%",
+              maxHeight: 400,
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
           {occurrence.images.length > 1 && (
-            <div className={styles.thumbnails}>
+            <Stack direction="row" spacing={1} sx={{ p: 1, justifyContent: "center" }}>
               {occurrence.images.map((img, idx) => (
-                <button
+                <Box
                   key={img}
-                  className={`${styles.thumbnail} ${idx === activeImageIndex ? styles.active : ""}`}
+                  component="button"
                   onClick={() => setActiveImageIndex(idx)}
+                  sx={{
+                    width: 60,
+                    height: 60,
+                    p: 0,
+                    border: 2,
+                    borderColor: idx === activeImageIndex ? "primary.main" : "divider",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    bgcolor: "transparent",
+                  }}
                 >
-                  <img src={getImageUrl(img)} alt={`Photo ${idx + 1}`} />
-                </button>
+                  <Box
+                    component="img"
+                    src={getImageUrl(img)}
+                    alt={`Photo ${idx + 1}`}
+                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </Box>
               ))}
-            </div>
+            </Stack>
           )}
-        </div>
+        </Box>
       )}
 
-      <div className={styles.content}>
-        <h1 className={styles.species}>{species}</h1>
+      {/* Content */}
+      <Box sx={{ p: 3 }}>
+        <Typography
+          variant="h5"
+          sx={{ fontStyle: "italic", color: "primary.main", fontWeight: 600 }}
+        >
+          {species}
+        </Typography>
 
         {occurrence.scientificName &&
           occurrence.communityId &&
           occurrence.scientificName !== occurrence.communityId && (
-            <div className={styles.originalId}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Originally identified as: {occurrence.scientificName}
-            </div>
+            </Typography>
           )}
 
-        <div className={styles.observer}>
-          {occurrence.observer.avatar && (
-            <img
-              src={occurrence.observer.avatar}
-              alt={displayName}
-              className={styles.avatar}
-            />
-          )}
-          <div className={styles.observerInfo}>
-            <span className={styles.name}>{displayName}</span>
-            {handle && <span className={styles.handle}>{handle}</span>}
-          </div>
-        </div>
+        {/* Observer */}
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+          component={Link}
+          to={`/profile/${encodeURIComponent(occurrence.observer.did)}`}
+          sx={{
+            mt: 2,
+            textDecoration: "none",
+            color: "inherit",
+            "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
+            p: 1,
+            mx: -1,
+            borderRadius: 1,
+          }}
+        >
+          <Avatar src={occurrence.observer.avatar} alt={displayName} />
+          <Box>
+            <Typography fontWeight={600}>{displayName}</Typography>
+            {handle && (
+              <Typography variant="body2" color="text.disabled">
+                {handle}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
 
-        <div className={styles.details}>
-          <div className={styles.detailRow}>
-            <span className={styles.detailLabel}>Observed</span>
-            <span className={styles.detailValue}>
-              {formatDate(occurrence.eventDate)}
-            </span>
-          </div>
+        {/* Details */}
+        <Box sx={{ mt: 3 }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Observed
+              </Typography>
+              <Typography>{formatDate(occurrence.eventDate)}</Typography>
+            </Box>
 
-          {occurrence.verbatimLocality && (
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Location</span>
-              <span className={styles.detailValue}>
-                {occurrence.verbatimLocality}
-              </span>
-            </div>
-          )}
+            {occurrence.verbatimLocality && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Location
+                </Typography>
+                <Typography>{occurrence.verbatimLocality}</Typography>
+              </Box>
+            )}
 
-          <div className={styles.detailRow}>
-            <span className={styles.detailLabel}>Coordinates</span>
-            <span className={styles.detailValue}>
-              {occurrence.location.latitude.toFixed(5)},{" "}
-              {occurrence.location.longitude.toFixed(5)}
-              {occurrence.location.uncertaintyMeters && (
-                <span className={styles.accuracy}>
-                  {" "}
-                  (±{occurrence.location.uncertaintyMeters}m)
-                </span>
-              )}
-            </span>
-          </div>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Coordinates
+              </Typography>
+              <Typography>
+                {occurrence.location.latitude.toFixed(5)},{" "}
+                {occurrence.location.longitude.toFixed(5)}
+                {occurrence.location.uncertaintyMeters && (
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.disabled"
+                  >
+                    {" "}
+                    (±{occurrence.location.uncertaintyMeters}m)
+                  </Typography>
+                )}
+              </Typography>
+            </Box>
 
-          {occurrence.occurrenceRemarks && (
-            <div className={styles.remarks}>
-              <span className={styles.detailLabel}>Notes</span>
-              <p>{occurrence.occurrenceRemarks}</p>
-            </div>
-          )}
-        </div>
+            {occurrence.occurrenceRemarks && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Notes
+                </Typography>
+                <Typography>{occurrence.occurrenceRemarks}</Typography>
+              </Box>
+            )}
+          </Stack>
+        </Box>
 
+        {/* Identification Panel */}
         {user && agent ? (
           <IdentificationPanel
             occurrence={{
@@ -215,11 +299,13 @@ export function OccurrenceDetail() {
             onSuccess={handleIdentificationSuccess}
           />
         ) : (
-          <div className={styles.loginPrompt}>
-            <p>Log in to add an identification</p>
-          </div>
+          <Paper sx={{ mt: 3, p: 2, textAlign: "center", bgcolor: "background.paper" }}>
+            <Typography color="text.secondary">
+              Log in to add an identification
+            </Typography>
+          </Paper>
         )}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 }

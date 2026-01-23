@@ -1,7 +1,7 @@
 import { useEffect } from "react";
+import { Stack, Alert } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { removeToast } from "../../store/uiSlice";
-import styles from "./Toast.module.css";
 
 export function ToastContainer() {
   const toasts = useAppSelector((state) => state.ui.toasts);
@@ -19,15 +19,32 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className={styles.container}>
+    <Stack
+      sx={{
+        position: "fixed",
+        bottom: 80,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 2000,
+      }}
+      spacing={1}
+    >
       {toasts.map((toast) => (
-        <div
+        <Alert
           key={toast.id}
-          className={`${styles.toast} ${toast.type === "error" ? styles.error : ""}`}
+          severity={toast.type === "error" ? "error" : "success"}
+          sx={{
+            minWidth: 200,
+            animation: "slideIn 0.3s ease-out",
+            "@keyframes slideIn": {
+              from: { transform: "translateY(100px)", opacity: 0 },
+              to: { transform: "translateY(0)", opacity: 1 },
+            },
+          }}
         >
           {toast.message}
-        </div>
+        </Alert>
       ))}
-    </div>
+    </Stack>
   );
 }

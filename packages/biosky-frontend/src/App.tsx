@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
+import { ThemeProvider, CssBaseline, Box } from "@mui/material";
+import theme from "./theme";
 import { store, useAppDispatch } from "./store";
 import { checkAuth } from "./store/authSlice";
 import { Header } from "./components/layout/Header";
@@ -26,7 +28,16 @@ function AppContent() {
   return (
     <BrowserRouter>
       <Header />
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", paddingBottom: "60px" }}>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          paddingBottom: "60px",
+        }}
+      >
         <Routes>
           <Route path="/" element={<FeedView />} />
           <Route path="/map" element={<MapView />} />
@@ -34,7 +45,7 @@ function AppContent() {
           <Route path="/profile/:did" element={<ProfileView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </main>
+      </Box>
       <FAB />
       <BottomNav />
       <LoginModal />
@@ -47,7 +58,10 @@ function AppContent() {
 export function App() {
   return (
     <Provider store={store}>
-      <AppContent />
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppContent />
+      </ThemeProvider>
     </Provider>
   );
 }

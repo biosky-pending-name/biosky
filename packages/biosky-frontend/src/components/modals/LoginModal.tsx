@@ -1,8 +1,15 @@
 import { useState, FormEvent } from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+} from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeLoginModal } from "../../store/uiSlice";
 import { getLoginUrl } from "../../services/api";
-import { ModalOverlay } from "./ModalOverlay";
 
 export function LoginModal() {
   const dispatch = useAppDispatch();
@@ -23,14 +30,13 @@ export function LoginModal() {
   };
 
   return (
-    <ModalOverlay isOpen={isOpen} onClose={handleClose} maxWidth="400px">
-      <h2>Log in with Bluesky</h2>
+    <Dialog open={isOpen} onClose={handleClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="handle-input">Handle</label>
-          <input
-            type="text"
-            id="handle-input"
+        <DialogTitle>Log in with Bluesky</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Handle"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             placeholder="e.g., alice.bsky.social"
@@ -38,24 +44,19 @@ export function LoginModal() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
+            margin="normal"
+            autoFocus
           />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            justifyContent: "flex-end",
-            marginTop: "1rem",
-          }}
-        >
-          <button type="button" className="btn btn-secondary" onClick={handleClose}>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleClose} color="inherit">
             Cancel
-          </button>
-          <button type="submit" className="btn btn-primary">
+          </Button>
+          <Button type="submit" variant="contained" color="primary">
             Log in
-          </button>
-        </div>
+          </Button>
+        </DialogActions>
       </form>
-    </ModalOverlay>
+    </Dialog>
   );
 }
