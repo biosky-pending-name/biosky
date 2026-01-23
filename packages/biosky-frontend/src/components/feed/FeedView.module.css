@@ -55,6 +55,12 @@
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .list {
