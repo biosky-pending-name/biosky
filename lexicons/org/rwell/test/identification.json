@@ -23,8 +23,9 @@
           "taxonRank": {
             "type": "string",
             "description": "The taxonomic rank of the identification (e.g., species, genus, family).",
-            "enum": ["kingdom", "phylum", "class", "order", "family", "genus", "species", "subspecies", "variety"],
-            "default": "species"
+            "knownValues": ["kingdom", "phylum", "class", "order", "family", "genus", "species", "subspecies", "variety", "form"],
+            "default": "species",
+            "maxLength": 32
           },
           "comment": {
             "type": "string",

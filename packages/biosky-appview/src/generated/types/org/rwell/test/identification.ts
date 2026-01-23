@@ -34,6 +34,8 @@ export interface Main {
     | 'species'
     | 'subspecies'
     | 'variety'
+    | 'form'
+    | (string & {})
   /** Explanation or reasoning for this identification. */
   comment?: string
   /** If true, this identification agrees with the current community ID rather than proposing a new one. */

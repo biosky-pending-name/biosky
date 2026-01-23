@@ -39,7 +39,7 @@ export const schemaDict = {
               type: 'string',
               description:
                 'The taxonomic rank of the identification (e.g., species, genus, family).',
-              enum: [
+              knownValues: [
                 'kingdom',
                 'phylum',
                 'class',
@@ -49,8 +49,10 @@ export const schemaDict = {
                 'species',
                 'subspecies',
                 'variety',
+                'form',
               ],
               default: 'species',
+              maxLength: 32,
             },
             comment: {
               type: 'string',
