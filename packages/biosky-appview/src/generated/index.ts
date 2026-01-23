@@ -7,6 +7,7 @@
  */
 
 export * as OrgRwellTestIdentification from './types/org/rwell/test/identification.js'
+export * as OrgRwellTestLike from './types/org/rwell/test/like.js'
 export * as OrgRwellTestOccurrence from './types/org/rwell/test/occurrence.js'
 
 export { schemas, lexicons, ids } from './lexicons.js'

@@ -52,6 +52,7 @@ const simplifiedIndex = `/**
  */
 
 export * as OrgRwellTestIdentification from './types/org/rwell/test/identification.js'
+export * as OrgRwellTestLike from './types/org/rwell/test/like.js'
 export * as OrgRwellTestOccurrence from './types/org/rwell/test/occurrence.js'
 
 export { schemas, lexicons, ids } from './lexicons.js'
@@ -110,5 +111,33 @@ occurrenceContent = occurrenceContent
 
 writeFileSync(occurrencePath, occurrenceContent);
 console.log('Fixed: occurrence.ts');
+
+// Fix like.ts - remove CID import, fix imports, and inline StrongRef
+const likePath = join(generatedDir, 'types/org/rwell/test/like.ts');
+let likeContent = readFileSync(likePath, 'utf-8');
+
+likeContent = likeContent
+  .replace(/import { type ValidationResult, BlobRef } from '@atproto\/lexicon'\n/, `import { type BlobRef } from '@atproto/lexicon'\n`)
+  .replace(/import { CID } from 'multiformats\/cid'\n/, '')
+  .replace(/import { validate as _validate } from '\.\.\/\.\.\/\.\.\/\.\.\/lexicons'/, `import { validate as _validate } from '../../../../lexicons.js'`)
+  .replace(/import \{\n  type \$Typed,\n  is\$typed as _is\$typed,\n  type OmitKey,\n\} from '\.\.\/\.\.\/\.\.\/\.\.\/util'/, `import {\n  is$typed as _is$typed,\n} from '../../../../util.js'`)
+  .replace(/import type \* as ComAtprotoRepoStrongRef from '\.\.\/\.\.\/\.\.\/com\/atproto\/repo\/strongRef\.js'\n/, '')
+  .replace(/subject: ComAtprotoRepoStrongRef\.Main/, 'subject: StrongRef');
+
+// Add StrongRef interface after imports for like.ts
+const likeLines = likeContent.split('\n');
+let likeLastImportIndex = -1;
+for (let i = 0; i < likeLines.length; i++) {
+  if (likeLines[i].startsWith('import ') || likeLines[i].startsWith('} from ')) {
+    likeLastImportIndex = i;
+  }
+}
+if (likeLastImportIndex !== -1) {
+  likeLines.splice(likeLastImportIndex + 1, 0, strongRefInterface);
+  likeContent = likeLines.join('\n');
+}
+
+writeFileSync(likePath, likeContent);
+console.log('Fixed: like.ts');
 
 console.log('All generated types fixed!');

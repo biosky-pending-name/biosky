@@ -113,7 +113,7 @@ describe('CommunityIdCalculator', () => {
   // Helper to create mock identification rows
   function createIdentification(
     scientificName: string,
-    options: { taxonRank?: string; isAgreement?: boolean } = {}
+    options: { taxonRank?: string; isAgreement?: boolean; subjectIndex?: number } = {}
   ): IdentificationRow {
     return {
       uri: `at://did:plc:test/org.rwell.test.identification/${Math.random()}`,
@@ -121,6 +121,7 @@ describe('CommunityIdCalculator', () => {
       did: 'did:plc:test',
       subject_uri: 'at://did:plc:test/org.rwell.test.occurrence/1',
       subject_cid: 'subject-cid',
+      subject_index: options.subjectIndex ?? 0,
       scientific_name: scientificName,
       taxon_rank: options.taxonRank || 'species',
       identification_qualifier: null,
