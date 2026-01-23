@@ -131,7 +131,8 @@ export class AppViewServer {
         credentials: true,
       }),
     );
-    this.app.use(express.json());
+    // Increase JSON body size limit for base64 image uploads
+    this.app.use(express.json({ limit: "50mb" }));
     this.app.use(cookieParser());
   }
 
@@ -182,6 +183,7 @@ export class AppViewServer {
           longitude,
           notes,
           eventDate,
+          images,
         } = req.body;
 
         if (!latitude || !longitude) {
@@ -198,8 +200,38 @@ export class AppViewServer {
           return;
         }
 
+        // Upload images as blobs if provided
+        const associatedMedia: Array<{ image: unknown; alt: string }> = [];
+
+        if (images && Array.isArray(images)) {
+          for (let i = 0; i < images.length; i++) {
+            const img = images[i] as { data: string; mimeType: string };
+            if (!img.data || !img.mimeType) continue;
+
+            try {
+              // Convert base64 to Uint8Array using Node.js Buffer
+              const bytes = new Uint8Array(Buffer.from(img.data, "base64"));
+
+              // Upload blob to PDS
+              const blobResponse = await agent.uploadBlob(bytes, {
+                encoding: img.mimeType,
+              });
+
+              associatedMedia.push({
+                image: blobResponse.data.blob,
+                alt: `Photo ${i + 1}${scientificName ? ` of ${scientificName}` : ""}`,
+              });
+
+              logger.info({ size: bytes.length, mimeType: img.mimeType }, "Uploaded blob to PDS");
+            } catch (blobError) {
+              logger.error({ err: blobError }, "Error uploading blob");
+              // Continue with other images even if one fails
+            }
+          }
+        }
+
         // User is authenticated - post to AT Protocol network
-        const record = {
+        const record: Record<string, unknown> = {
           $type: "org.rwell.test.occurrence",
           scientificName: scientificName || undefined,
           eventDate: eventDate || new Date().toISOString(),
@@ -213,6 +245,11 @@ export class AppViewServer {
           createdAt: new Date().toISOString(),
         };
 
+        // Add images if any were successfully uploaded
+        if (associatedMedia.length > 0) {
+          record.associatedMedia = associatedMedia;
+        }
+
         // Create the record on the user's PDS
         const result = await agent.com.atproto.repo.createRecord({
           repo: sessionDid,
@@ -220,7 +257,7 @@ export class AppViewServer {
           record,
         });
 
-        logger.info({ uri: result.data.uri }, "Created AT Protocol record");
+        logger.info({ uri: result.data.uri, imageCount: associatedMedia.length }, "Created AT Protocol record");
 
         res.status(201).json({
           success: true,

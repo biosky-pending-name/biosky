@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, useCallback } from "react";
+import { useState, useEffect, FormEvent, useCallback, useRef, ChangeEvent } from "react";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeUploadModal, addToast } from "../../store/uiSlice";
 import { resetFeed, loadInitialFeed } from "../../store/feedSlice";
@@ -7,6 +7,11 @@ import type { TaxaResult } from "../../services/types";
 import { ModalOverlay } from "./ModalOverlay";
 import { ConservationStatus } from "../common/ConservationStatus";
 import styles from "./UploadModal.module.css";
+
+interface ImagePreview {
+  file: File;
+  preview: string;
+}
 
 const QUICK_SPECIES = [
   { name: "Eschscholzia californica", label: "California Poppy" },
@@ -30,6 +35,12 @@ export function UploadModal() {
   const [lng, setLng] = useState("");
   const [suggestions, setSuggestions] = useState<TaxaResult[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState<ImagePreview[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_IMAGES = 10;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const VALID_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +75,86 @@ export function UploadModal() {
     setSpecies("");
     setNotes("");
     setSuggestions([]);
+    // Clean up image previews
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setImages([]);
+  };
+
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+
+    for (const file of files) {
+      // Validate file type
+      if (!VALID_TYPES.includes(file.type)) {
+        dispatch(addToast({
+          message: `Invalid file type: ${file.name}. Use JPG, PNG, or WebP.`,
+          type: "error"
+        }));
+        continue;
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        dispatch(addToast({
+          message: `File too large: ${file.name}. Max size is 10MB.`,
+          type: "error"
+        }));
+        continue;
+      }
+
+      // Check max images limit
+      if (images.length >= MAX_IMAGES) {
+        dispatch(addToast({
+          message: `Maximum ${MAX_IMAGES} images allowed.`,
+          type: "error"
+        }));
+        break;
+      }
+
+      // Create preview and add to state
+      const preview = URL.createObjectURL(file);
+      setImages((prev) => [...prev, { file, preview }]);
+
+      // Try to extract EXIF location from first image
+      if (images.length === 0 && !lat && !lng) {
+        extractExifLocation(file);
+      }
+    }
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const extractExifLocation = async (file: File) => {
+    try {
+      // Use exif-js style extraction - simplified version
+      const arrayBuffer = await file.arrayBuffer();
+      const dataView = new DataView(arrayBuffer);
+
+      // Check for JPEG
+      if (dataView.getUint16(0) !== 0xffd8) return;
+
+      // For now, we'll rely on a more robust library in the future
+      // This is a placeholder that demonstrates the intent
+      // Real EXIF parsing would be done with exifr or similar
+    } catch (error) {
+      console.error("EXIF extraction error:", error);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].preview);
+      newImages.splice(index, 1);
+      return newImages;
+    });
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleSpeciesChange = useCallback(async (value: string) => {
@@ -97,8 +188,18 @@ export function UploadModal() {
     setIsSubmitting(true);
 
     try {
+      // Convert images to base64 for upload
+      const imageData: Array<{ data: string; mimeType: string }> = [];
+      for (const img of images) {
+        const base64 = await fileToBase64(img.file);
+        imageData.push({
+          data: base64,
+          mimeType: img.file.type,
+        });
+      }
+
       if (isEditMode && editingOccurrence) {
-        // Update existing occurrence
+        // Update existing occurrence (images not supported in edit yet)
         await updateOccurrence({
           uri: editingOccurrence.uri,
           scientificName: species || "Unknown species",
@@ -109,13 +210,14 @@ export function UploadModal() {
         });
         dispatch(addToast({ message: "Occurrence updated successfully!", type: "success" }));
       } else {
-        // Create new occurrence
+        // Create new occurrence with images
         await submitOccurrence({
           scientificName: species || "Unknown species",
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
           notes: notes || undefined,
           eventDate: new Date().toISOString(),
+          images: imageData.length > 0 ? imageData : undefined,
         });
         dispatch(addToast({ message: "Occurrence submitted successfully!", type: "success" }));
       }
@@ -133,6 +235,20 @@ export function UploadModal() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const locationDisplay = lat && lng ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : "Getting location...";
@@ -205,6 +321,46 @@ export function UploadModal() {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Describe what you observed..."
           />
+        </div>
+        <div className="form-group">
+          <label>Photos (optional)</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={handleImageSelect}
+            style={{ display: "none" }}
+          />
+          {images.length > 0 && (
+            <div className={styles.imagePreviews}>
+              {images.map((img, index) => (
+                <div key={index} className={styles.imagePreview}>
+                  <img src={img.preview} alt={`Preview ${index + 1}`} />
+                  <button
+                    type="button"
+                    className={styles.removeImage}
+                    onClick={() => handleRemoveImage(index)}
+                    aria-label="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {images.length < MAX_IMAGES && (
+            <button
+              type="button"
+              className={styles.uploadButton}
+              onClick={handleUploadClick}
+            >
+              {images.length === 0 ? "Add photos" : "Add more photos"}
+            </button>
+          )}
+          <div className={styles.uploadHint}>
+            JPG, PNG, or WebP • Max 10MB each • Up to {MAX_IMAGES} photos
+          </div>
         </div>
         <div className="form-group">
           <label>Location (from map center)</label>
