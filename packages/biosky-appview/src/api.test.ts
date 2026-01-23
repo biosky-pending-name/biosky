@@ -36,14 +36,23 @@ const createMockCommunityIdCalculator = () => ({
 let mockCommunityIdCalculator: ReturnType<typeof createMockCommunityIdCalculator>;
 
 // Mock the dependencies before importing AppViewServer
-vi.mock("biosky-shared", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("biosky-shared")>();
+vi.mock("./database/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./database/index.js")>();
 
   // Create a class-like mock for Database
   const MockDatabase = function (this: ReturnType<typeof createMockDatabase>) {
     mockDatabase = createMockDatabase();
     Object.assign(this, mockDatabase);
   } as unknown as new () => ReturnType<typeof createMockDatabase>;
+
+  return {
+    ...actual,
+    Database: MockDatabase,
+  };
+});
+
+vi.mock("./auth/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./auth/index.js")>();
 
   // Create a class-like mock for OAuthService
   const MockOAuthService = function (this: ReturnType<typeof createMockOAuthService>) {
@@ -53,8 +62,6 @@ vi.mock("biosky-shared", async (importOriginal) => {
 
   return {
     ...actual,
-    Database: MockDatabase,
-    getDatabaseUrl: vi.fn().mockReturnValue("postgresql://test:5432/test"),
     getIdentityResolver: vi.fn().mockImplementation(() => {
       if (!mockIdentityResolver) {
         mockIdentityResolver = createMockIdentityResolver();

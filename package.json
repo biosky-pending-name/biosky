@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w biosky-shared && npm run build -w biosky-appview -w biosky-frontend",
+    "build": "npm run build -w biosky-appview -w biosky-frontend",
     "dev": "npm run dev --workspace=biosky-appview",
     "generate-types": "node scripts/generate-types.js",
     "test": "vitest",

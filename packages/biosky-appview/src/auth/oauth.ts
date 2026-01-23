@@ -9,9 +9,6 @@ import {
   NodeOAuthClient,
   type NodeOAuthClientOptions,
 } from "@atproto/oauth-client-node";
-import {
-  buildAtprotoLoopbackClientMetadata,
-} from "@atproto/oauth-types";
 import { JoseKey } from "@atproto/jwk-jose";
 import { Agent, AtpAgent } from "@atproto/api";
 import express from "express";
@@ -235,10 +232,17 @@ export class OAuthService {
       // Use loopback client metadata for local development
       // This uses the special http://localhost?... client_id format
       console.log("Using loopback mode for local development");
-      clientMetadata = buildAtprotoLoopbackClientMetadata({
+      // Build loopback client_id: http://localhost?redirect_uri=...&scope=...
+      const loopbackClientId = this.clientId;
+      clientMetadata = {
+        client_id: loopbackClientId as `http://localhost${string}`,
+        redirect_uris: [this.redirectUri as `http://127.0.0.1${string}`] as [`http://127.0.0.1${string}`],
         scope: this.config.scope,
-        redirect_uris: [this.redirectUri as `http://127.0.0.1${string}`],
-      });
+        grant_types: ["authorization_code", "refresh_token"] as ["authorization_code", "refresh_token"],
+        response_types: ["code"] as ["code"],
+        token_endpoint_auth_method: "none" as const,
+        dpop_bound_access_tokens: true,
+      };
     } else {
       // Production mode: use discoverable client_id pointing to client-metadata.json
       clientMetadata = {
@@ -303,10 +307,15 @@ export class OAuthService {
   getClientMetadata(): object {
     if (this.isLoopbackMode) {
       // Return loopback client metadata
-      return buildAtprotoLoopbackClientMetadata({
+      return {
+        client_id: this.clientId,
+        redirect_uris: [this.redirectUri],
         scope: this.config.scope,
-        redirect_uris: [this.redirectUri as `http://127.0.0.1${string}`],
-      });
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none",
+        dpop_bound_access_tokens: true,
+      };
     }
     return {
       client_id: this.clientId,

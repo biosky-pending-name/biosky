@@ -24,10 +24,10 @@ jobs:
       - name: Check generated types
         run: |
           npm run generate-types
-          if [ -n "$(git status --porcelain packages/biosky-shared/src/generated/)" ]; then
+          if [ -n "$(git status --porcelain packages/biosky-appview/src/generated/)" ]; then
             echo "Error: Generated types are out of date."
             echo "Please run 'npm run generate-types' and commit the changes."
-            git diff packages/biosky-shared/src/generated/
+            git diff packages/biosky-appview/src/generated/
             exit 1
           fi
 

@@ -18,7 +18,7 @@ import { AtpAgent } from "@atproto/api";
 import {
   OrgRwellTestOccurrence,
   ids,
-} from "biosky-shared";
+} from "../packages/biosky-appview/src/generated/index.js";
 
 const COLLECTION = ids.OrgRwellTestOccurrence;
 

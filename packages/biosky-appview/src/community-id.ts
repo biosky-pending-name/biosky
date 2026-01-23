@@ -10,7 +10,7 @@
  * - More recent IDs and expert identifiers could be weighted (future)
  */
 
-import { Database, type IdentificationRow } from "biosky-shared";
+import { Database, type IdentificationRow } from "./database/index.js";
 
 interface CommunityIdResult {
   scientificName: string;

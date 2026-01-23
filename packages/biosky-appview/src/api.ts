@@ -32,15 +32,30 @@ const logger = pino({
 });
 import {
   Database,
-  getDatabaseUrl,
+  type OccurrenceRow,
+  type IdentificationRow,
+} from "./database/index.js";
+import {
   getIdentityResolver,
   OAuthService,
   DatabaseStateStore,
   DatabaseSessionStore,
-  type OccurrenceRow,
-  type IdentificationRow,
   type Profile,
-} from "biosky-shared";
+} from "./auth/index.js";
+
+// Utility to build DATABASE_URL from environment variables
+function getDatabaseUrl(): string {
+  // If DB_PASSWORD is set, construct URL from individual components (GCP Secret Manager)
+  if (process.env.DB_PASSWORD) {
+    const host = process.env.DB_HOST || "localhost";
+    const name = process.env.DB_NAME || "biosky";
+    const user = process.env.DB_USER || "postgres";
+    const password = process.env.DB_PASSWORD;
+    return `postgresql://${user}:${password}@/${name}?host=${host}`;
+  }
+  // Otherwise use DATABASE_URL directly (local dev)
+  return process.env.DATABASE_URL || "postgresql://localhost:5432/biosky";
+}
 import { TaxonomyResolver } from "./taxonomy.js";
 import { CommunityIdCalculator } from "./community-id.js";
 

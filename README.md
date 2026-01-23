@@ -24,26 +24,22 @@ A decentralized biodiversity observation platform built on the AT Protocol.
 
 ## Project Structure
 
-This is a monorepo with 4 npm packages and 1 Rust package:
+This is a monorepo with 3 npm packages and 2 Rust packages:
 
 ```
 packages/
-├── biosky-shared/      # Shared types, lexicons, database, auth utilities
-├── biosky-appview/     # REST API server (Express)
+├── biosky-appview/     # REST API server (Express) + shared types, database, auth
 ├── biosky-ingester/    # AT Protocol firehose consumer (Rust)
-├── biosky-media-proxy/ # Image caching proxy
+├── biosky-media-proxy/ # Image caching proxy (Rust)
 └── biosky-frontend/    # Web UI (Vite + MapLibre GL)
 ```
 
 ### Package Dependencies
 
 ```
-biosky-shared (no internal deps)
-    ↑
-    ├── biosky-appview
-    └── biosky-frontend
-
-biosky-media-proxy (standalone, no internal deps)
+biosky-appview (standalone)
+biosky-frontend (communicates with appview via REST)
+biosky-media-proxy (standalone Rust binary)
 biosky-ingester (standalone Rust binary)
 ```
 
@@ -55,12 +51,6 @@ Darwin Core compliant schemas for biodiversity data following [TDWG standards](h
 
 - `org.rwell.test.occurrence` - Occurrence records following the [Darwin Core Occurrence class](https://dwc.tdwg.org/terms/#occurrence)
 - `org.rwell.test.identification` - Taxonomic determinations following the [Darwin Core Identification class](https://dwc.tdwg.org/terms/#identification)
-
-### Shared (`packages/biosky-shared/`)
-
-- **Database** - Prisma client with PostgreSQL + PostGIS for spatial queries
-- **Auth** - AT Protocol OAuth 2.0 client, handle/DID resolution
-- **Generated Types** - TypeScript types generated from lexicon schemas
 
 ### Ingester (`packages/biosky-ingester/`) - Rust
 
