@@ -8,7 +8,7 @@ import styles from "./FeedView.module.css";
 
 export function FeedView() {
   const dispatch = useAppDispatch();
-  const { occurrences, isLoading, currentTab, hasMore } = useAppSelector(
+  const { occurrences, isLoading, currentTab, hasMore, homeFeedMeta } = useAppSelector(
     (state) => state.feed
   );
   const contentRef = useRef<HTMLDivElement>(null);
@@ -61,7 +61,24 @@ export function FeedView() {
         {isLoading && <div className={styles.loading}>Loading...</div>}
         {!isLoading && occurrences.length === 0 && (
           <div className={styles.empty}>
-            No occurrences yet. Be the first to post!
+            {currentTab === "home" ? (
+              <>
+                <p>No observations from people you follow yet.</p>
+                {homeFeedMeta && homeFeedMeta.totalFollows > 0 && (
+                  <p className={styles.emptyHint}>
+                    You follow {homeFeedMeta.totalFollows} people, but none have posted observations.
+                  </p>
+                )}
+                <button
+                  className={styles.switchTabBtn}
+                  onClick={() => handleTabClick("explore")}
+                >
+                  Browse all observations
+                </button>
+              </>
+            ) : (
+              "No occurrences yet. Be the first to post!"
+            )}
           </div>
         )}
       </div>

@@ -22,7 +22,7 @@ const initialState: FeedState = {
   occurrences: [],
   cursor: undefined,
   isLoading: false,
-  currentTab: "home",
+  currentTab: "explore",  // Default to explore to show all posts
   hasMore: true,
   filters: {},
   isAuthenticated: false,
