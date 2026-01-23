@@ -14,23 +14,23 @@ COPY Cargo.toml Cargo.lock ./
 
 # Copy package manifests
 COPY packages/biosky-ingester/Cargo.toml packages/biosky-ingester/
-COPY packages/biosky-media-proxy-rs/Cargo.toml packages/biosky-media-proxy-rs/
+COPY packages/biosky-media-proxy/Cargo.toml packages/biosky-media-proxy/
 
 # Create dummy sources to cache dependencies
-RUN mkdir -p packages/biosky-ingester/src packages/biosky-media-proxy-rs/src && \
+RUN mkdir -p packages/biosky-ingester/src packages/biosky-media-proxy/src && \
     echo "fn main() {}" > packages/biosky-ingester/src/main.rs && \
     echo "" > packages/biosky-ingester/src/lib.rs && \
-    echo "fn main() {}" > packages/biosky-media-proxy-rs/src/main.rs && \
-    echo "" > packages/biosky-media-proxy-rs/src/lib.rs
+    echo "fn main() {}" > packages/biosky-media-proxy/src/main.rs && \
+    echo "" > packages/biosky-media-proxy/src/lib.rs
 
 # Build dependencies only (this layer will be cached)
-RUN cargo build --release -p biosky-media-proxy && rm -rf packages/biosky-media-proxy-rs/src
+RUN cargo build --release -p biosky-media-proxy && rm -rf packages/biosky-media-proxy/src
 
 # Copy real source code for media proxy
-COPY packages/biosky-media-proxy-rs/src packages/biosky-media-proxy-rs/src
+COPY packages/biosky-media-proxy/src packages/biosky-media-proxy/src
 
 # Build for release (touch to invalidate cache for main.rs)
-RUN touch packages/biosky-media-proxy-rs/src/main.rs && cargo build --release -p biosky-media-proxy
+RUN touch packages/biosky-media-proxy/src/main.rs && cargo build --release -p biosky-media-proxy
 
 # Runtime stage
 FROM debian:bookworm-slim
