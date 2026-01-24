@@ -201,6 +201,29 @@ export class Database {
 
       CREATE UNIQUE INDEX IF NOT EXISTS community_ids_uri_subject_taxon_idx
         ON community_ids(occurrence_uri, subject_index, scientific_name);
+
+      -- Private location data (AppView-managed, stores exact coords for privacy)
+      CREATE TABLE IF NOT EXISTS occurrence_private_data (
+        uri TEXT PRIMARY KEY,
+        exact_location GEOGRAPHY(POINT, 4326),
+        geoprivacy TEXT NOT NULL DEFAULT 'open'
+          CHECK (geoprivacy IN ('open', 'obscured', 'private')),
+        effective_geoprivacy TEXT
+          CHECK (effective_geoprivacy IN ('open', 'obscured', 'private')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS occurrence_private_data_exact_location_idx
+        ON occurrence_private_data USING GIST(exact_location);
+
+      -- Sensitive species list (for auto-obscuration rules)
+      CREATE TABLE IF NOT EXISTS sensitive_species (
+        scientific_name TEXT PRIMARY KEY,
+        geoprivacy TEXT NOT NULL CHECK (geoprivacy IN ('obscured', 'private')),
+        reason TEXT,
+        source TEXT
+      );
     `);
 
     console.log("Database migrations completed");
@@ -806,6 +829,59 @@ export class Database {
   async refreshCommunityIds(): Promise<void> {
     await this.pool.query(
       "REFRESH MATERIALIZED VIEW CONCURRENTLY community_ids",
+    );
+  }
+
+  // Private location data methods
+
+  async saveOccurrencePrivateData(
+    uri: string,
+    lat: number,
+    lng: number,
+    geoprivacy: "open" | "obscured" | "private" = "open",
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO occurrence_private_data (uri, exact_location, geoprivacy, effective_geoprivacy)
+       VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $4)
+       ON CONFLICT (uri) DO UPDATE SET
+         exact_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+         geoprivacy = $4,
+         effective_geoprivacy = $4,
+         updated_at = NOW()`,
+      [uri, lng, lat, geoprivacy],
+    );
+  }
+
+  async getOccurrencePrivateData(uri: string): Promise<{
+    exactLatitude: number;
+    exactLongitude: number;
+    geoprivacy: string;
+    effectiveGeoprivacy: string | null;
+  } | null> {
+    const result = await this.pool.query(
+      `SELECT
+        ST_Y(exact_location::geometry) as exact_latitude,
+        ST_X(exact_location::geometry) as exact_longitude,
+        geoprivacy,
+        effective_geoprivacy
+       FROM occurrence_private_data
+       WHERE uri = $1`,
+      [uri],
+    );
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+      exactLatitude: row.exact_latitude,
+      exactLongitude: row.exact_longitude,
+      geoprivacy: row.geoprivacy,
+      effectiveGeoprivacy: row.effective_geoprivacy,
+    };
+  }
+
+  async deleteOccurrencePrivateData(uri: string): Promise<void> {
+    await this.pool.query(
+      "DELETE FROM occurrence_private_data WHERE uri = $1",
+      [uri],
     );
   }
 

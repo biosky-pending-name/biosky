@@ -284,6 +284,14 @@ export class AppViewServer {
 
         logger.info({ uri: result.data.uri, imageCount: associatedMedia.length }, "Created AT Protocol record");
 
+        // Store exact coordinates in private data table
+        await this.db.saveOccurrencePrivateData(
+          result.data.uri,
+          latitude,
+          longitude,
+          "open", // Default geoprivacy for now
+        );
+
         res.status(201).json({
           success: true,
           uri: result.data.uri,
@@ -367,6 +375,14 @@ export class AppViewServer {
         });
 
         logger.info({ uri: result.data.uri }, "Updated AT Protocol record");
+
+        // Update exact coordinates in private data table
+        await this.db.saveOccurrencePrivateData(
+          result.data.uri,
+          latitude,
+          longitude,
+          "open", // Default geoprivacy for now
+        );
 
         res.json({
           success: true,

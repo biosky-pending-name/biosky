@@ -13,6 +13,9 @@ const createMockDatabase = () => ({
   getIdentificationsForOccurrence: vi.fn().mockResolvedValue([]),
   getSubjectsForOccurrence: vi.fn().mockResolvedValue([]),
   getCommunityId: vi.fn().mockResolvedValue(null),
+  saveOccurrencePrivateData: vi.fn().mockResolvedValue(undefined),
+  getOccurrencePrivateData: vi.fn().mockResolvedValue(null),
+  deleteOccurrencePrivateData: vi.fn().mockResolvedValue(undefined),
 });
 
 const createMockIdentityResolver = () => ({

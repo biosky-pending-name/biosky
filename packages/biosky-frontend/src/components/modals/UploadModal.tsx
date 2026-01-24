@@ -16,16 +16,17 @@ import {
   IconButton,
   Alert,
   Autocomplete,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeUploadModal, addToast } from "../../store/uiSlice";
-import { resetFeed, loadInitialFeed } from "../../store/feedSlice";
 import {
   submitOccurrence,
   updateOccurrence,
   searchTaxa,
+  fetchOccurrence,
 } from "../../services/api";
 import type { TaxaResult } from "../../services/types";
 import { ModalOverlay } from "./ModalOverlay";
@@ -74,8 +75,8 @@ export function UploadModal() {
         setSpecies(editingOccurrence.scientificName || "");
         setNotes(editingOccurrence.occurrenceRemarks || "");
         if (editingOccurrence.location) {
-          setLat(editingOccurrence.location.lat.toFixed(6));
-          setLng(editingOccurrence.location.lng.toFixed(6));
+          setLat(editingOccurrence.location.latitude.toFixed(6));
+          setLng(editingOccurrence.location.longitude.toFixed(6));
         }
       } else if (currentLocation) {
         setLat(currentLocation.lat.toFixed(6));
@@ -188,6 +189,19 @@ export function UploadModal() {
     setSuggestions([]);
   };
 
+  // Poll for occurrence to appear in database after AT Protocol submission
+  const waitForOccurrence = async (uri: string, maxAttempts = 30): Promise<boolean> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const result = await fetchOccurrence(uri);
+      if (result?.occurrence) {
+        return true;
+      }
+      // Wait 1 second between attempts
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    return false;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -210,8 +224,10 @@ export function UploadModal() {
         });
       }
 
+      let occurrenceUri: string;
+
       if (isEditMode && editingOccurrence) {
-        await updateOccurrence({
+        const result = await updateOccurrence({
           uri: editingOccurrence.uri,
           scientificName: species || "Unknown species",
           latitude: parseFloat(lat),
@@ -219,6 +235,11 @@ export function UploadModal() {
           notes: notes || undefined,
           eventDate: editingOccurrence.eventDate || new Date().toISOString(),
         });
+
+        // Wait for the update to be processed
+        await waitForOccurrence(result.uri);
+        occurrenceUri = result.uri;
+
         dispatch(
           addToast({
             message: "Occurrence updated successfully!",
@@ -226,7 +247,7 @@ export function UploadModal() {
           })
         );
       } else {
-        await submitOccurrence({
+        const result = await submitOccurrence({
           scientificName: species || "Unknown species",
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
@@ -234,17 +255,23 @@ export function UploadModal() {
           eventDate: new Date().toISOString(),
           images: imageData.length > 0 ? imageData : undefined,
         });
+
+        // Wait for the occurrence to be processed by the ingester
+        const processed = await waitForOccurrence(result.uri);
+        occurrenceUri = result.uri;
+
         dispatch(
           addToast({
-            message: "Occurrence submitted successfully!",
+            message: processed
+              ? "Occurrence submitted successfully!"
+              : "Observation submitted! It may take a moment to appear.",
             type: "success",
           })
         );
       }
 
-      handleClose();
-      dispatch(resetFeed());
-      dispatch(loadInitialFeed());
+      // Navigate to the occurrence page
+      window.location.href = `/occurrence/${encodeURIComponent(occurrenceUri)}`;
     } catch (error) {
       dispatch(
         addToast({
@@ -488,6 +515,7 @@ export function UploadModal() {
             variant="contained"
             color="primary"
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
             {isSubmitting
               ? isEditMode
