@@ -38,6 +38,22 @@ export interface Main {
     | 'variety'
     | 'form'
     | (string & {})
+  /** External taxon identifier (e.g., gbif:2878688). Prefixed with source. */
+  taxonId?: string
+  /** Common name for the taxon in the identifier's language. */
+  vernacularName?: string
+  /** Taxonomic kingdom (e.g., Animalia, Plantae). */
+  kingdom?: string
+  /** Taxonomic phylum. */
+  phylum?: string
+  /** Taxonomic class. */
+  class?: string
+  /** Taxonomic order. */
+  order?: string
+  /** Taxonomic family. */
+  family?: string
+  /** Taxonomic genus. */
+  genus?: string
   /** Explanation or reasoning for this identification. */
   comment?: string
   /** If true, this identification agrees with the current community ID rather than proposing a new one. */

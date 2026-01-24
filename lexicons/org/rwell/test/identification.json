@@ -34,6 +34,46 @@
             "default": "species",
             "maxLength": 32
           },
+          "taxonId": {
+            "type": "string",
+            "description": "External taxon identifier (e.g., gbif:2878688). Prefixed with source.",
+            "maxLength": 64
+          },
+          "vernacularName": {
+            "type": "string",
+            "description": "Common name for the taxon in the identifier's language.",
+            "maxLength": 256
+          },
+          "kingdom": {
+            "type": "string",
+            "description": "Taxonomic kingdom (e.g., Animalia, Plantae).",
+            "maxLength": 64
+          },
+          "phylum": {
+            "type": "string",
+            "description": "Taxonomic phylum.",
+            "maxLength": 64
+          },
+          "class": {
+            "type": "string",
+            "description": "Taxonomic class.",
+            "maxLength": 64
+          },
+          "order": {
+            "type": "string",
+            "description": "Taxonomic order.",
+            "maxLength": 64
+          },
+          "family": {
+            "type": "string",
+            "description": "Taxonomic family.",
+            "maxLength": 64
+          },
+          "genus": {
+            "type": "string",
+            "description": "Taxonomic genus.",
+            "maxLength": 64
+          },
           "comment": {
             "type": "string",
             "description": "Explanation or reasoning for this identification.",

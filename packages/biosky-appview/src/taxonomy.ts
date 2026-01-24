@@ -81,7 +81,7 @@ export class TaxonomyResolver {
     }
 
     const matchType = gbifMatch.diagnostics?.matchType;
-    const taxon = this.gbifV2ToTaxon(gbifMatch.usage, gbifMatch.additionalStatus);
+    const taxon = this.gbifV2ToTaxon(gbifMatch.usage, gbifMatch.additionalStatus, gbifMatch.classification);
 
     if (matchType === "EXACT") {
       return {
@@ -182,6 +182,7 @@ export class TaxonomyResolver {
   private gbifV2ToTaxon(
     usage: GbifV2NameUsage,
     additionalStatus?: GbifV2AdditionalStatus[],
+    classification?: GbifV2NameUsage[],
   ): TaxonResult {
     // Extract IUCN conservation status if available
     const iucnStatus = additionalStatus?.find((s) => s.datasetAlias === "IUCN");
@@ -192,17 +193,27 @@ export class TaxonomyResolver {
         }
       : undefined;
 
+    // Extract taxonomy from classification array
+    const classificationByRank = new Map<string, string>();
+    if (classification) {
+      for (const item of classification) {
+        if (item.rank && item.name) {
+          classificationByRank.set(item.rank.toUpperCase(), item.name);
+        }
+      }
+    }
+
     return {
       id: `gbif:${usage.key}`,
       scientificName: usage.canonicalName || usage.name || "",
       rank: usage.rank?.toLowerCase() || "unknown",
-      kingdom: usage.kingdom,
-      phylum: usage.phylum,
-      class: usage.class,
-      order: usage.order,
-      family: usage.family,
-      genus: usage.genus,
-      species: usage.species,
+      kingdom: classificationByRank.get("KINGDOM") || usage.kingdom,
+      phylum: classificationByRank.get("PHYLUM") || usage.phylum,
+      class: classificationByRank.get("CLASS") || usage.class,
+      order: classificationByRank.get("ORDER") || usage.order,
+      family: classificationByRank.get("FAMILY") || usage.family,
+      genus: classificationByRank.get("GENUS") || usage.genus,
+      species: classificationByRank.get("SPECIES") || usage.species,
       source: "gbif",
       conservationStatus,
     };

@@ -796,6 +796,10 @@ export class AppViewServer {
           return;
         }
 
+        // Fetch taxonomy hierarchy from GBIF
+        const validationResult = await this.taxonomy.validate(taxonName.trim());
+        const taxon = validationResult.taxon;
+
         // Build the identification record
         const record = {
           $type: "org.rwell.test.identification",
@@ -810,6 +814,15 @@ export class AppViewServer {
           isAgreement,
           confidence,
           createdAt: new Date().toISOString(),
+          // Darwin Core taxonomy fields from GBIF
+          taxonId: taxon?.id,
+          vernacularName: taxon?.commonName,
+          kingdom: taxon?.kingdom,
+          phylum: taxon?.phylum,
+          class: taxon?.class,
+          order: taxon?.order,
+          family: taxon?.family,
+          genus: taxon?.genus,
         };
 
         // Create the record on the user's PDS

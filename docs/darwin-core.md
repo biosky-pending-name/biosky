@@ -95,6 +95,14 @@ A taxonomic determination (dwc:Identification) for an occurrence.
   },
   "taxonName": "Eschscholzia californica",
   "taxonRank": "species",
+  "taxonId": "gbif:3084746",
+  "vernacularName": "California Poppy",
+  "kingdom": "Plantae",
+  "phylum": "Tracheophyta",
+  "class": "Magnoliopsida",
+  "order": "Ranunculales",
+  "family": "Papaveraceae",
+  "genus": "Eschscholzia",
   "comment": "Distinctive orange petals and feathery leaves",
   "isAgreement": false,
   "confidence": "high",
@@ -117,18 +125,18 @@ A taxonomic determination (dwc:Identification) for an occurrence.
 | (AT Protocol URI) | dwc:identificationID | ⚠️ | AT URI serves as identifier |
 | (DID) | dwc:identifiedBy | ⚠️ | Derived from AT Protocol identity |
 | — | dwc:identificationQualifier | ❌ | Qualifier like "cf." or "aff." |
-| — | dwc:taxonID | ❌ | External taxon URI (GBIF, iNaturalist, etc.) |
+| `taxonId` | dwc:taxonID | ✅ | External taxon ID (e.g., gbif:2878688) |
 | — | dwc:scientificNameAuthorship | ❌ | Authorship of the scientific name |
 | — | dwc:identificationVerificationStatus | ❌ | Verification status |
 | — | dwc:identificationReferences | ❌ | References used for identification |
 | — | dwc:typeStatus | ❌ | Type specimen status |
-| — | dwc:kingdom | ❌ | Taxonomic kingdom |
-| — | dwc:phylum | ❌ | Taxonomic phylum |
-| — | dwc:class | ❌ | Taxonomic class |
-| — | dwc:order | ❌ | Taxonomic order |
-| — | dwc:family | ❌ | Taxonomic family |
-| — | dwc:genus | ❌ | Taxonomic genus |
-| — | dwc:vernacularName | ❌ | Common name |
+| `kingdom` | dwc:kingdom | ✅ | Taxonomic kingdom |
+| `phylum` | dwc:phylum | ✅ | Taxonomic phylum |
+| `class` | dwc:class | ✅ | Taxonomic class |
+| `order` | dwc:order | ✅ | Taxonomic order |
+| `family` | dwc:family | ✅ | Taxonomic family |
+| `genus` | dwc:genus | ✅ | Taxonomic genus |
+| `vernacularName` | dwc:vernacularName | ✅ | Common name |
 
 ## References
 

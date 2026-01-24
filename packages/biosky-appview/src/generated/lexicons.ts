@@ -62,6 +62,48 @@ export const schemaDict = {
               default: 'species',
               maxLength: 32,
             },
+            taxonId: {
+              type: 'string',
+              description:
+                'External taxon identifier (e.g., gbif:2878688). Prefixed with source.',
+              maxLength: 64,
+            },
+            vernacularName: {
+              type: 'string',
+              description:
+                "Common name for the taxon in the identifier's language.",
+              maxLength: 256,
+            },
+            kingdom: {
+              type: 'string',
+              description: 'Taxonomic kingdom (e.g., Animalia, Plantae).',
+              maxLength: 64,
+            },
+            phylum: {
+              type: 'string',
+              description: 'Taxonomic phylum.',
+              maxLength: 64,
+            },
+            class: {
+              type: 'string',
+              description: 'Taxonomic class.',
+              maxLength: 64,
+            },
+            order: {
+              type: 'string',
+              description: 'Taxonomic order.',
+              maxLength: 64,
+            },
+            family: {
+              type: 'string',
+              description: 'Taxonomic family.',
+              maxLength: 64,
+            },
+            genus: {
+              type: 'string',
+              description: 'Taxonomic genus.',
+              maxLength: 64,
+            },
             comment: {
               type: 'string',
               description: 'Explanation or reasoning for this identification.',
@@ -169,6 +211,19 @@ export const schemaDict = {
               description:
                 'Additional notes or comments about the observation.',
               maxLength: 3000,
+            },
+            license: {
+              type: 'string',
+              description:
+                'SPDX license identifier for this observation (maps to Dublin Core dcterms:license).',
+              knownValues: [
+                'CC0-1.0',
+                'CC-BY-4.0',
+                'CC-BY-NC-4.0',
+                'CC-BY-SA-4.0',
+                'CC-BY-NC-SA-4.0',
+              ],
+              maxLength: 32,
             },
             createdAt: {
               type: 'string',
