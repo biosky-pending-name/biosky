@@ -17,6 +17,10 @@ import {
   Alert,
   Autocomplete,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
@@ -45,6 +49,14 @@ const QUICK_SPECIES = [
   { name: "Sciurus griseus", label: "Western Gray Squirrel" },
 ];
 
+const LICENSE_OPTIONS = [
+  { value: "CC0-1.0", label: "CC0 (Public Domain)" },
+  { value: "CC-BY-4.0", label: "CC BY (Attribution)" },
+  { value: "CC-BY-NC-4.0", label: "CC BY-NC (Attribution, Non-Commercial)" },
+  { value: "CC-BY-SA-4.0", label: "CC BY-SA (Attribution, Share-Alike)" },
+  { value: "CC-BY-NC-SA-4.0", label: "CC BY-NC-SA (Attribution, Non-Commercial, Share-Alike)" },
+];
+
 export function UploadModal() {
   const dispatch = useAppDispatch();
   const isOpen = useAppSelector((state) => state.ui.uploadModalOpen);
@@ -58,6 +70,7 @@ export function UploadModal() {
 
   const [species, setSpecies] = useState("");
   const [notes, setNotes] = useState("");
+  const [license, setLicense] = useState("CC-BY-4.0");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [suggestions, setSuggestions] = useState<TaxaResult[]>([]);
@@ -100,6 +113,7 @@ export function UploadModal() {
     dispatch(closeUploadModal());
     setSpecies("");
     setNotes("");
+    setLicense("CC-BY-4.0");
     setSuggestions([]);
     images.forEach((img) => URL.revokeObjectURL(img.preview));
     setImages([]);
@@ -233,6 +247,7 @@ export function UploadModal() {
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
           notes: notes || undefined,
+          license,
           eventDate: editingOccurrence.eventDate || new Date().toISOString(),
         });
 
@@ -252,6 +267,7 @@ export function UploadModal() {
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
           notes: notes || undefined,
+          license,
           eventDate: new Date().toISOString(),
           images: imageData.length > 0 ? imageData : undefined,
         });
@@ -418,6 +434,22 @@ export function UploadModal() {
           rows={2}
           margin="normal"
         />
+
+        <FormControl fullWidth margin="normal">
+          <InputLabel id="license-label">License</InputLabel>
+          <Select
+            labelId="license-label"
+            value={license}
+            label="License"
+            onChange={(e) => setLicense(e.target.value)}
+          >
+            {LICENSE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
           Photos (optional)

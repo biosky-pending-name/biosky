@@ -207,6 +207,7 @@ export class AppViewServer {
           latitude,
           longitude,
           notes,
+          license,
           eventDate,
           images,
         } = req.body;
@@ -267,6 +268,7 @@ export class AppViewServer {
             geodeticDatum: "WGS84",
           },
           notes: notes || undefined,
+          license: license || undefined,
           createdAt: new Date().toISOString(),
         };
 
@@ -313,6 +315,7 @@ export class AppViewServer {
           latitude,
           longitude,
           notes,
+          license,
           eventDate,
         } = req.body;
 
@@ -363,6 +366,7 @@ export class AppViewServer {
             geodeticDatum: "WGS84",
           },
           notes: notes || undefined,
+          license: license || undefined,
           createdAt: new Date().toISOString(),
         };
 

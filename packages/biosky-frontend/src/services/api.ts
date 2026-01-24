@@ -172,6 +172,7 @@ export async function submitOccurrence(data: {
   latitude: number;
   longitude: number;
   notes?: string;
+  license?: string;
   eventDate: string;
   images?: Array<{ data: string; mimeType: string }>;
 }): Promise<{ uri: string; cid: string }> {
@@ -198,6 +199,7 @@ export async function updateOccurrence(data: {
   latitude: number;
   longitude: number;
   notes?: string;
+  license?: string;
   eventDate: string;
 }): Promise<{ uri: string; cid: string }> {
   const response = await fetch(`${API_BASE}/api/occurrences`, {
