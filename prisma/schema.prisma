@@ -20,7 +20,6 @@ model Occurrence {
   uri                           String   @id
   cid                           String
   did                           String
-  basisOfRecord                 String   @default("HumanObservation") @map("basis_of_record")
   scientificName                String?  @map("scientific_name")
   eventDate                     DateTime @map("event_date")
   // PostGIS geography type - use raw SQL for spatial queries
@@ -36,15 +35,7 @@ model Occurrence {
   locality                      String?
   waterBody                     String?  @map("water_body")
   verbatimLocality              String?  @map("verbatim_locality")
-  habitat                       String?
-  occurrenceStatus              String?  @default("present") @map("occurrence_status")
   occurrenceRemarks             String?  @map("occurrence_remarks")
-  individualCount               Int?     @map("individual_count")
-  sex                           String?
-  lifeStage                     String?  @map("life_stage")
-  reproductiveCondition         String?  @map("reproductive_condition")
-  behavior                      String?
-  establishmentMeans            String?  @map("establishment_means")
   associatedMedia               Json?    @map("associated_media")
   recordedBy                    String?  @map("recorded_by")
   taxonId                       String?  @map("taxon_id")
@@ -65,7 +56,6 @@ model Occurrence {
   @@index([scientificName], name: "occurrences_scientific_name_idx")
   @@index([did], name: "occurrences_did_idx")
   @@index([eventDate], name: "occurrences_event_date_idx")
-  @@index([basisOfRecord], name: "occurrences_basis_of_record_idx")
   @@map("occurrences")
 }
 

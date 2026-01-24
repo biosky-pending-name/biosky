@@ -77,21 +77,12 @@ export class Database {
         cid TEXT NOT NULL,
         did TEXT NOT NULL,
         -- Darwin Core terms
-        basis_of_record TEXT NOT NULL DEFAULT 'HumanObservation',
         scientific_name TEXT,
         event_date TIMESTAMPTZ NOT NULL,
         location GEOGRAPHY(POINT, 4326) NOT NULL,
         coordinate_uncertainty_meters INTEGER,
         verbatim_locality TEXT,
-        habitat TEXT,
-        occurrence_status TEXT DEFAULT 'present',
         occurrence_remarks TEXT,
-        individual_count INTEGER,
-        sex TEXT,
-        life_stage TEXT,
-        reproductive_condition TEXT,
-        behavior TEXT,
-        establishment_means TEXT,
         associated_media JSONB,
         recorded_by TEXT,
         created_at TIMESTAMPTZ NOT NULL,
@@ -113,10 +104,6 @@ export class Database {
       -- Create index on event date for temporal queries
       CREATE INDEX IF NOT EXISTS occurrences_event_date_idx
         ON occurrences(event_date);
-
-      -- Create index on basis of record
-      CREATE INDEX IF NOT EXISTS occurrences_basis_of_record_idx
-        ON occurrences(basis_of_record);
 
       -- Identifications table (Darwin Core Identification class)
       CREATE TABLE IF NOT EXISTS identifications (
@@ -340,62 +327,50 @@ export class Database {
 
     await this.pool.query(
       `INSERT INTO occurrences (
-        uri, cid, did, basis_of_record, scientific_name, event_date, location,
+        uri, cid, did, scientific_name, event_date, location,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat, occurrence_status,
-        occurrence_remarks, individual_count, sex, life_stage, reproductive_condition,
-        behavior, establishment_means, associated_media, recorded_by,
+        verbatim_locality, occurrence_remarks, associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
-        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-        $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39
+        $1, $2, $3, $4, $5,
+        ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
+        $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
       )
       ON CONFLICT (uri) DO UPDATE SET
         cid = $2,
-        basis_of_record = $4,
-        scientific_name = $5,
-        event_date = $6,
-        location = ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
-        coordinate_uncertainty_meters = $9,
-        continent = $10,
-        country = $11,
-        country_code = $12,
-        state_province = $13,
-        county = $14,
-        municipality = $15,
-        locality = $16,
-        water_body = $17,
-        verbatim_locality = $18,
-        habitat = $19,
-        occurrence_status = $20,
-        occurrence_remarks = $21,
-        individual_count = $22,
-        sex = $23,
-        life_stage = $24,
-        reproductive_condition = $25,
-        behavior = $26,
-        establishment_means = $27,
-        associated_media = $28,
-        recorded_by = $29,
-        taxon_id = $30,
-        taxon_rank = $31,
-        vernacular_name = $32,
-        kingdom = $33,
-        phylum = $34,
-        class = $35,
-        "order" = $36,
-        family = $37,
-        genus = $38,
+        scientific_name = $4,
+        event_date = $5,
+        location = ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
+        coordinate_uncertainty_meters = $8,
+        continent = $9,
+        country = $10,
+        country_code = $11,
+        state_province = $12,
+        county = $13,
+        municipality = $14,
+        locality = $15,
+        water_body = $16,
+        verbatim_locality = $17,
+        occurrence_remarks = $18,
+        associated_media = $19,
+        recorded_by = $20,
+        taxon_id = $21,
+        taxon_rank = $22,
+        vernacular_name = $23,
+        kingdom = $24,
+        phylum = $25,
+        class = $26,
+        "order" = $27,
+        family = $28,
+        genus = $29,
         indexed_at = NOW()`,
       [
         event.uri,
         event.cid,
         event.did,
-        "HumanObservation",
         record.scientificName || null,
         record.eventDate,
         location.decimalLongitude,
@@ -411,15 +386,7 @@ export class Database {
         location.locality || null,
         location.waterBody || null,
         record.verbatimLocality || null,
-        null, // habitat
-        "present", // occurrenceStatus
         record.notes || null,
-        null, // individualCount
-        null, // sex
-        null, // lifeStage
-        null, // reproductiveCondition
-        null, // behavior
-        null, // establishmentMeans
         JSON.stringify(record.blobs || []),
         null, // recordedBy
         record.taxonId || null,
@@ -519,14 +486,12 @@ export class Database {
   ): Promise<OccurrenceRow[]> {
     const result = await this.pool.query(
       `SELECT
-        uri, cid, did, basis_of_record, scientific_name, event_date,
+        uri, cid, did, scientific_name, event_date,
         ST_Y(location::geometry) as latitude,
         ST_X(location::geometry) as longitude,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat,
-        occurrence_status, occurrence_remarks, individual_count, sex,
-        life_stage, reproductive_condition, behavior, establishment_means,
+        verbatim_locality, occurrence_remarks,
         associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at,
@@ -553,14 +518,12 @@ export class Database {
   ): Promise<OccurrenceRow[]> {
     const result = await this.pool.query(
       `SELECT
-        uri, cid, did, basis_of_record, scientific_name, event_date,
+        uri, cid, did, scientific_name, event_date,
         ST_Y(location::geometry) as latitude,
         ST_X(location::geometry) as longitude,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat,
-        occurrence_status, occurrence_remarks, individual_count, sex,
-        life_stage, reproductive_condition, behavior, establishment_means,
+        verbatim_locality, occurrence_remarks,
         associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at
@@ -586,14 +549,12 @@ export class Database {
 
     const result = await this.pool.query(
       `SELECT
-        uri, cid, did, basis_of_record, scientific_name, event_date,
+        uri, cid, did, scientific_name, event_date,
         ST_Y(location::geometry) as latitude,
         ST_X(location::geometry) as longitude,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat,
-        occurrence_status, occurrence_remarks, individual_count, sex,
-        life_stage, reproductive_condition, behavior, establishment_means,
+        verbatim_locality, occurrence_remarks,
         associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at
@@ -646,14 +607,12 @@ export class Database {
 
     const result = await this.pool.query(
       `SELECT
-        uri, cid, did, basis_of_record, scientific_name, event_date,
+        uri, cid, did, scientific_name, event_date,
         ST_Y(location::geometry) as latitude,
         ST_X(location::geometry) as longitude,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat,
-        occurrence_status, occurrence_remarks, individual_count, sex,
-        life_stage, reproductive_condition, behavior, establishment_means,
+        verbatim_locality, occurrence_remarks,
         associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at
@@ -703,14 +662,12 @@ export class Database {
 
       const occResult = await this.pool.query(
         `SELECT
-          uri, cid, did, basis_of_record, scientific_name, event_date,
+          uri, cid, did, scientific_name, event_date,
           ST_Y(location::geometry) as latitude,
           ST_X(location::geometry) as longitude,
           coordinate_uncertainty_meters,
           continent, country, country_code, state_province, county, municipality, locality, water_body,
-          verbatim_locality, habitat,
-          occurrence_status, occurrence_remarks, individual_count, sex,
-          life_stage, reproductive_condition, behavior, establishment_means,
+          verbatim_locality, occurrence_remarks,
           associated_media, recorded_by,
           taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
           created_at
@@ -845,14 +802,12 @@ export class Database {
       ORDER BY uri, created_at DESC
     )
     SELECT
-      uri, cid, did, basis_of_record, scientific_name, event_date,
+      uri, cid, did, scientific_name, event_date,
       ST_Y(location::geometry) as latitude,
       ST_X(location::geometry) as longitude,
       coordinate_uncertainty_meters,
       continent, country, country_code, state_province, county, municipality, locality, water_body,
-      verbatim_locality, habitat,
-      occurrence_status, occurrence_remarks, individual_count, sex,
-      life_stage, reproductive_condition, behavior, establishment_means,
+      verbatim_locality, occurrence_remarks,
       associated_media, recorded_by,
       taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
       created_at, source
@@ -876,14 +831,12 @@ export class Database {
   async getOccurrence(uri: string): Promise<OccurrenceRow | null> {
     const result = await this.pool.query(
       `SELECT
-        uri, cid, did, basis_of_record, scientific_name, event_date,
+        uri, cid, did, scientific_name, event_date,
         ST_Y(location::geometry) as latitude,
         ST_X(location::geometry) as longitude,
         coordinate_uncertainty_meters,
         continent, country, country_code, state_province, county, municipality, locality, water_body,
-        verbatim_locality, habitat,
-        occurrence_status, occurrence_remarks, individual_count, sex,
-        life_stage, reproductive_condition, behavior, establishment_means,
+        verbatim_locality, occurrence_remarks,
         associated_media, recorded_by,
         taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
         created_at

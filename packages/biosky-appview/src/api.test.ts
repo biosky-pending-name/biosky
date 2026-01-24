@@ -294,20 +294,13 @@ describe("AppViewServer", () => {
         uri: "at://did:plc:test/org.rwell.test.occurrence/abc",
         cid: "bafytest",
         did: "did:plc:test",
-        basis_of_record: "HumanObservation",
         scientific_name: "Quercus agrifolia",
         event_date: new Date("2026-01-01"),
         latitude: 37.7749,
         longitude: -122.4194,
         coordinate_uncertainty_meters: 50,
         verbatim_locality: null,
-        habitat: null,
-        occurrence_status: "present",
         occurrence_remarks: null,
-        individual_count: null,
-        sex: null,
-        life_stage: null,
-        behavior: null,
         associated_media: [],
         created_at: new Date("2026-01-01"),
       };
@@ -391,20 +384,13 @@ describe("AppViewServer", () => {
         uri: "at://did:plc:test/org.rwell.test.occurrence/abc",
         cid: "bafytest",
         did: "did:plc:test",
-        basis_of_record: "HumanObservation",
         scientific_name: "Quercus agrifolia",
         event_date: new Date("2026-01-01"),
         latitude: 37.7749,
         longitude: -122.4194,
         coordinate_uncertainty_meters: null,
         verbatim_locality: null,
-        habitat: null,
-        occurrence_status: "present",
         occurrence_remarks: null,
-        individual_count: null,
-        sex: null,
-        life_stage: null,
-        behavior: null,
         associated_media: [],
         created_at: new Date("2026-01-01"),
       };
@@ -456,20 +442,13 @@ describe("AppViewServer", () => {
         uri: "at://did:plc:test/org.rwell.test.occurrence/abc",
         cid: "bafytest",
         did: "did:plc:test",
-        basis_of_record: "HumanObservation",
         scientific_name: "Quercus agrifolia",
         event_date: new Date("2026-01-01"),
         latitude: 37.7749,
         longitude: -122.4194,
         coordinate_uncertainty_meters: null,
         verbatim_locality: null,
-        habitat: null,
-        occurrence_status: "present",
         occurrence_remarks: null,
-        individual_count: null,
-        sex: null,
-        life_stage: null,
-        behavior: null,
         associated_media: [],
         created_at: new Date("2026-01-01"),
       };
@@ -563,7 +542,6 @@ describe("AppViewServer", () => {
         properties: {
           uri: "at://did:plc:test/org.rwell.test.occurrence/abc",
           scientificName: "Quercus agrifolia",
-          basisOfRecord: "HumanObservation",
           eventDate: "2026-01-01T00:00:00.000Z",
         },
       });
@@ -672,20 +650,13 @@ describe("AppViewServer", () => {
         uri: "at://did:plc:test/org.rwell.test.occurrence/abc",
         cid: "bafytest",
         did: "did:plc:test",
-        basis_of_record: "HumanObservation",
         scientific_name: null,
         event_date: new Date("2026-01-01"),
         latitude: 37.7749,
         longitude: -122.4194,
         coordinate_uncertainty_meters: null,
         verbatim_locality: "Golden Gate Park",
-        habitat: "Urban park",
-        occurrence_status: "present",
         occurrence_remarks: "Beautiful specimen",
-        individual_count: 3,
-        sex: "unknown",
-        life_stage: "adult",
-        behavior: "foraging",
         associated_media: [{ image: { ref: "blobref123" } }],
         created_at: new Date("2026-01-01"),
       };
@@ -700,14 +671,9 @@ describe("AppViewServer", () => {
         "/media/blob/did:plc:test/blobref123",
       ]);
       expect(res.body.occurrences[0].verbatimLocality).toBe("Golden Gate Park");
-      expect(res.body.occurrences[0].habitat).toBe("Urban park");
       expect(res.body.occurrences[0].occurrenceRemarks).toBe(
         "Beautiful specimen"
       );
-      expect(res.body.occurrences[0].individualCount).toBe(3);
-      expect(res.body.occurrences[0].sex).toBe("unknown");
-      expect(res.body.occurrences[0].lifeStage).toBe("adult");
-      expect(res.body.occurrences[0].behavior).toBe("foraging");
     });
 
     it("handles empty occurrences array", async () => {

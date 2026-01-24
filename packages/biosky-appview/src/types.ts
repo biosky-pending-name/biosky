@@ -38,7 +38,6 @@ export interface OccurrenceRow {
   uri: string;
   cid: string;
   did: string;
-  basis_of_record: string;
   scientific_name: string | null;
   event_date: Date;
   latitude: number;
@@ -54,15 +53,7 @@ export interface OccurrenceRow {
   locality: string | null;
   water_body: string | null;
   verbatim_locality: string | null;
-  habitat: string | null;
-  occurrence_status: string;
   occurrence_remarks: string | null;
-  individual_count: number | null;
-  sex: string | null;
-  life_stage: string | null;
-  reproductive_condition: string | null;
-  behavior: string | null;
-  establishment_means: string | null;
   associated_media: unknown[];
   recorded_by: string | null;
   taxon_id: string | null;

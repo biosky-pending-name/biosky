@@ -83,7 +83,6 @@ interface OccurrenceResponse {
     avatar?: string;
   };
   // Darwin Core fields
-  basisOfRecord: string;
   scientificName?: string;
   communityId?: string; // Keep for backward compat (refers to subject 0)
   subjects: SubjectResponse[]; // All subjects with their community IDs
@@ -94,13 +93,7 @@ interface OccurrenceResponse {
     uncertaintyMeters?: number;
   };
   verbatimLocality?: string;
-  habitat?: string;
-  occurrenceStatus: string;
   occurrenceRemarks?: string;
-  individualCount?: number;
-  sex?: string;
-  lifeStage?: string;
-  behavior?: string;
   // Taxonomy fields
   taxonId?: string;
   taxonRank?: string;
@@ -649,7 +642,6 @@ export class AppViewServer {
           properties: {
             uri: row.uri,
             scientificName: row.scientific_name,
-            basisOfRecord: row.basis_of_record,
             eventDate: row.event_date.toISOString(),
           },
         }));
@@ -1071,7 +1063,6 @@ export class AppViewServer {
             avatar: profile?.avatar,
           },
           // Darwin Core fields
-          basisOfRecord: row.basis_of_record,
           scientificName: row.scientific_name || undefined,
           communityId: communityId || undefined,
           subjects,
@@ -1091,13 +1082,7 @@ export class AppViewServer {
             waterBody: row.water_body || undefined,
           },
           verbatimLocality: row.verbatim_locality || undefined,
-          habitat: row.habitat || undefined,
-          occurrenceStatus: row.occurrence_status,
           occurrenceRemarks: row.occurrence_remarks || undefined,
-          individualCount: row.individual_count || undefined,
-          sex: row.sex || undefined,
-          lifeStage: row.life_stage || undefined,
-          behavior: row.behavior || undefined,
           // Taxonomy fields
           taxonId: row.taxon_id || undefined,
           taxonRank: row.taxon_rank || undefined,
