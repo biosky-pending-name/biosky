@@ -230,6 +230,68 @@ export const schemaDict = {
               format: 'datetime',
               description: 'Timestamp when this record was created.',
             },
+            taxonId: {
+              type: 'string',
+              description:
+                'External taxon identifier (e.g., gbif:2878688). Prefixed with source.',
+              maxLength: 64,
+            },
+            taxonRank: {
+              type: 'string',
+              description:
+                'The taxonomic rank of the scientific name (e.g., species, genus, family).',
+              knownValues: [
+                'kingdom',
+                'phylum',
+                'class',
+                'order',
+                'family',
+                'genus',
+                'species',
+                'subspecies',
+                'variety',
+                'form',
+              ],
+              default: 'species',
+              maxLength: 32,
+            },
+            vernacularName: {
+              type: 'string',
+              description:
+                'Common name for the taxon (Darwin Core dwc:vernacularName).',
+              maxLength: 256,
+            },
+            kingdom: {
+              type: 'string',
+              description:
+                'Taxonomic kingdom (e.g., Animalia, Plantae) (Darwin Core dwc:kingdom).',
+              maxLength: 64,
+            },
+            phylum: {
+              type: 'string',
+              description: 'Taxonomic phylum (Darwin Core dwc:phylum).',
+              maxLength: 64,
+            },
+            class: {
+              type: 'string',
+              description: 'Taxonomic class (Darwin Core dwc:class).',
+              maxLength: 64,
+            },
+            order: {
+              type: 'string',
+              description: 'Taxonomic order (Darwin Core dwc:order).',
+              maxLength: 64,
+            },
+            family: {
+              type: 'string',
+              description: 'Taxonomic family (Darwin Core dwc:family).',
+              maxLength: 64,
+            },
+            genus: {
+              type: 'string',
+              description: 'Taxonomic genus (Darwin Core dwc:genus).',
+              maxLength: 64,
+            },
           },
         },
       },

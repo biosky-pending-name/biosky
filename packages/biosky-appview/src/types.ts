@@ -56,6 +56,15 @@ export interface OccurrenceRow {
   establishment_means: string | null;
   associated_media: unknown[];
   recorded_by: string | null;
+  taxon_id: string | null;
+  taxon_rank: string | null;
+  vernacular_name: string | null;
+  kingdom: string | null;
+  phylum: string | null;
+  class: string | null;
+  order: string | null;
+  family: string | null;
+  genus: string | null;
   created_at: Date;
   distance_meters?: number;
 }

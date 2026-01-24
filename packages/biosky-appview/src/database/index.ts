@@ -290,11 +290,14 @@ export class Database {
         uri, cid, did, basis_of_record, scientific_name, event_date, location,
         coordinate_uncertainty_meters, verbatim_locality, habitat, occurrence_status,
         occurrence_remarks, individual_count, sex, life_stage, reproductive_condition,
-        behavior, establishment_means, associated_media, recorded_by, created_at
+        behavior, establishment_means, associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
-        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+        $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
       )
       ON CONFLICT (uri) DO UPDATE SET
         cid = $2,
@@ -315,6 +318,15 @@ export class Database {
         establishment_means = $19,
         associated_media = $20,
         recorded_by = $21,
+        taxon_id = $22,
+        taxon_rank = $23,
+        vernacular_name = $24,
+        kingdom = $25,
+        phylum = $26,
+        class = $27,
+        "order" = $28,
+        family = $29,
+        genus = $30,
         indexed_at = NOW()`,
       [
         event.uri,
@@ -338,6 +350,15 @@ export class Database {
         null, // establishmentMeans
         JSON.stringify(record.blobs || []),
         null, // recordedBy
+        record.taxonId || null,
+        record.taxonRank || null,
+        record.vernacularName || null,
+        record.kingdom || null,
+        record.phylum || null,
+        record.class || null,
+        record.order || null,
+        record.family || null,
+        record.genus || null,
         record.createdAt,
       ],
     );
@@ -415,7 +436,9 @@ export class Database {
         coordinate_uncertainty_meters, verbatim_locality, habitat,
         occurrence_status, occurrence_remarks, individual_count, sex,
         life_stage, reproductive_condition, behavior, establishment_means,
-        associated_media, recorded_by, created_at,
+        associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at,
         ST_Distance(location, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) as distance_meters
       FROM occurrences
       WHERE ST_DWithin(
@@ -445,7 +468,9 @@ export class Database {
         coordinate_uncertainty_meters, verbatim_locality, habitat,
         occurrence_status, occurrence_remarks, individual_count, sex,
         life_stage, reproductive_condition, behavior, establishment_means,
-        associated_media, recorded_by, created_at
+        associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at
       FROM occurrences
       WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
       LIMIT $5`,
@@ -474,7 +499,9 @@ export class Database {
         coordinate_uncertainty_meters, verbatim_locality, habitat,
         occurrence_status, occurrence_remarks, individual_count, sex,
         life_stage, reproductive_condition, behavior, establishment_means,
-        associated_media, recorded_by, created_at
+        associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at
       FROM occurrences
       ${cursorCondition}
       ORDER BY created_at DESC
@@ -530,7 +557,9 @@ export class Database {
         coordinate_uncertainty_meters, verbatim_locality, habitat,
         occurrence_status, occurrence_remarks, individual_count, sex,
         life_stage, reproductive_condition, behavior, establishment_means,
-        associated_media, recorded_by, created_at
+        associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at
       FROM occurrences
       ${whereClause}
       ORDER BY created_at DESC
@@ -583,7 +612,9 @@ export class Database {
           coordinate_uncertainty_meters, verbatim_locality, habitat,
           occurrence_status, occurrence_remarks, individual_count, sex,
           life_stage, reproductive_condition, behavior, establishment_means,
-          associated_media, recorded_by, created_at
+          associated_media, recorded_by,
+          taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+          created_at
         FROM occurrences
         WHERE did = $1 ${occCursor}
         ORDER BY created_at DESC
@@ -720,7 +751,9 @@ export class Database {
       coordinate_uncertainty_meters, verbatim_locality, habitat,
       occurrence_status, occurrence_remarks, individual_count, sex,
       life_stage, reproductive_condition, behavior, establishment_means,
-      associated_media, recorded_by, created_at, source
+      associated_media, recorded_by,
+      taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+      created_at, source
     FROM combined
     ORDER BY created_at DESC
     LIMIT $${limitIdx}`;
@@ -747,7 +780,9 @@ export class Database {
         coordinate_uncertainty_meters, verbatim_locality, habitat,
         occurrence_status, occurrence_remarks, individual_count, sex,
         life_stage, reproductive_condition, behavior, establishment_means,
-        associated_media, recorded_by, created_at
+        associated_media, recorded_by,
+        taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
+        created_at
       FROM occurrences
       WHERE uri = $1`,
       [uri],

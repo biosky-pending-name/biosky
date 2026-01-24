@@ -100,6 +100,16 @@ interface OccurrenceResponse {
   sex?: string;
   lifeStage?: string;
   behavior?: string;
+  // Taxonomy fields
+  taxonId?: string;
+  taxonRank?: string;
+  vernacularName?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
   images: string[];
   createdAt: string;
   identificationCount?: number;
@@ -210,6 +220,15 @@ export class AppViewServer {
           license,
           eventDate,
           images,
+          taxonId,
+          taxonRank,
+          vernacularName,
+          kingdom,
+          phylum,
+          class: taxonomyClass,
+          order,
+          family,
+          genus,
         } = req.body;
 
         if (!latitude || !longitude) {
@@ -256,6 +275,23 @@ export class AppViewServer {
           }
         }
 
+        // Fetch taxonomy hierarchy from GBIF if scientificName is provided and taxonomy not already given
+        let taxon: {
+          id?: string;
+          commonName?: string;
+          kingdom?: string;
+          phylum?: string;
+          class?: string;
+          order?: string;
+          family?: string;
+          genus?: string;
+          rank?: string;
+        } | undefined;
+        if (scientificName && !taxonId) {
+          const validationResult = await this.taxonomy.validate(scientificName.trim());
+          taxon = validationResult.taxon;
+        }
+
         // User is authenticated - post to AT Protocol network
         const record: Record<string, unknown> = {
           $type: "org.rwell.test.occurrence",
@@ -269,6 +305,16 @@ export class AppViewServer {
           },
           notes: notes || undefined,
           license: license || undefined,
+          // Taxonomy fields - prefer user-provided, fall back to GBIF lookup
+          taxonId: taxonId || taxon?.id,
+          taxonRank: taxonRank || taxon?.rank,
+          vernacularName: vernacularName || taxon?.commonName,
+          kingdom: kingdom || taxon?.kingdom,
+          phylum: phylum || taxon?.phylum,
+          class: taxonomyClass || taxon?.class,
+          order: order || taxon?.order,
+          family: family || taxon?.family,
+          genus: genus || taxon?.genus,
           createdAt: new Date().toISOString(),
         };
 
@@ -317,6 +363,15 @@ export class AppViewServer {
           notes,
           license,
           eventDate,
+          taxonId,
+          taxonRank,
+          vernacularName,
+          kingdom,
+          phylum,
+          class: taxonomyClass,
+          order,
+          family,
+          genus,
         } = req.body;
 
         if (!uri) {
@@ -354,6 +409,23 @@ export class AppViewServer {
           return;
         }
 
+        // Fetch taxonomy hierarchy from GBIF if scientificName is provided and taxonomy not already given
+        let taxon: {
+          id?: string;
+          commonName?: string;
+          kingdom?: string;
+          phylum?: string;
+          class?: string;
+          order?: string;
+          family?: string;
+          genus?: string;
+          rank?: string;
+        } | undefined;
+        if (scientificName && !taxonId) {
+          const validationResult = await this.taxonomy.validate(scientificName.trim());
+          taxon = validationResult.taxon;
+        }
+
         // Build the updated record
         const record = {
           $type: "org.rwell.test.occurrence",
@@ -367,6 +439,16 @@ export class AppViewServer {
           },
           notes: notes || undefined,
           license: license || undefined,
+          // Taxonomy fields - prefer user-provided, fall back to GBIF lookup
+          taxonId: taxonId || taxon?.id,
+          taxonRank: taxonRank || taxon?.rank,
+          vernacularName: vernacularName || taxon?.commonName,
+          kingdom: kingdom || taxon?.kingdom,
+          phylum: phylum || taxon?.phylum,
+          class: taxonomyClass || taxon?.class,
+          order: order || taxon?.order,
+          family: family || taxon?.family,
+          genus: genus || taxon?.genus,
           createdAt: new Date().toISOString(),
         };
 
@@ -980,6 +1062,16 @@ export class AppViewServer {
           sex: row.sex || undefined,
           lifeStage: row.life_stage || undefined,
           behavior: row.behavior || undefined,
+          // Taxonomy fields
+          taxonId: row.taxon_id || undefined,
+          taxonRank: row.taxon_rank || undefined,
+          vernacularName: row.vernacular_name || undefined,
+          kingdom: row.kingdom || undefined,
+          phylum: row.phylum || undefined,
+          class: row.class || undefined,
+          order: row.order || undefined,
+          family: row.family || undefined,
+          genus: row.genus || undefined,
           images: (
             (row.associated_media || []) as Array<{
               image: { ref: string | { $link: string } };

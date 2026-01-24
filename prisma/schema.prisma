@@ -38,6 +38,15 @@ model Occurrence {
   establishmentMeans            String?  @map("establishment_means")
   associatedMedia               Json?    @map("associated_media")
   recordedBy                    String?  @map("recorded_by")
+  taxonId                       String?  @map("taxon_id")
+  taxonRank                     String?  @map("taxon_rank")
+  vernacularName                String?  @map("vernacular_name")
+  kingdom                       String?
+  phylum                        String?
+  class                         String?
+  order                         String?
+  family                        String?
+  genus                         String?
   createdAt                     DateTime @map("created_at")
   indexedAt                     DateTime @default(now()) @map("indexed_at")
 

@@ -111,6 +111,35 @@ impl Database {
             .and_then(|v| v.as_str());
         let associated_media = record.and_then(|r| r.get("associatedMedia"));
 
+        // Extract taxonomy fields
+        let taxon_id = record
+            .and_then(|r| r.get("taxonId"))
+            .and_then(|v| v.as_str());
+        let taxon_rank = record
+            .and_then(|r| r.get("taxonRank"))
+            .and_then(|v| v.as_str());
+        let vernacular_name = record
+            .and_then(|r| r.get("vernacularName"))
+            .and_then(|v| v.as_str());
+        let kingdom = record
+            .and_then(|r| r.get("kingdom"))
+            .and_then(|v| v.as_str());
+        let phylum = record
+            .and_then(|r| r.get("phylum"))
+            .and_then(|v| v.as_str());
+        let class = record
+            .and_then(|r| r.get("class"))
+            .and_then(|v| v.as_str());
+        let order = record
+            .and_then(|r| r.get("order"))
+            .and_then(|v| v.as_str());
+        let family = record
+            .and_then(|r| r.get("family"))
+            .and_then(|v| v.as_str());
+        let genus = record
+            .and_then(|r| r.get("genus"))
+            .and_then(|v| v.as_str());
+
         // Extract location
         let location = record.and_then(|r| r.get("location"));
         let lat = location
@@ -148,11 +177,13 @@ impl Database {
             INSERT INTO occurrences (
                 uri, did, cid, scientific_name, event_date, location,
                 coordinate_uncertainty_meters, verbatim_locality, occurrence_remarks,
-                associated_media, created_at, indexed_at
+                associated_media, created_at, indexed_at,
+                taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus
             )
             VALUES (
                 $1, $2, $3, $4, $5::timestamptz, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
-                $8, $9, $10, $11, $12::timestamptz, NOW()
+                $8, $9, $10, $11, $12::timestamptz, NOW(),
+                $13, $14, $15, $16, $17, $18, $19, $20, $21
             )
             ON CONFLICT (uri) DO UPDATE SET
                 cid = EXCLUDED.cid,
@@ -163,7 +194,16 @@ impl Database {
                 verbatim_locality = EXCLUDED.verbatim_locality,
                 occurrence_remarks = EXCLUDED.occurrence_remarks,
                 associated_media = EXCLUDED.associated_media,
-                indexed_at = NOW()
+                indexed_at = NOW(),
+                taxon_id = EXCLUDED.taxon_id,
+                taxon_rank = EXCLUDED.taxon_rank,
+                vernacular_name = EXCLUDED.vernacular_name,
+                kingdom = EXCLUDED.kingdom,
+                phylum = EXCLUDED.phylum,
+                class = EXCLUDED.class,
+                "order" = EXCLUDED."order",
+                family = EXCLUDED.family,
+                genus = EXCLUDED.genus
             "#,
         )
         .bind(&event.uri)
@@ -178,6 +218,15 @@ impl Database {
         .bind(notes)
         .bind(associated_media)
         .bind(created_at)
+        .bind(taxon_id)
+        .bind(taxon_rank)
+        .bind(vernacular_name)
+        .bind(kingdom)
+        .bind(phylum)
+        .bind(class)
+        .bind(order)
+        .bind(family)
+        .bind(genus)
         .execute(&self.pool)
         .await?;
         Ok(())

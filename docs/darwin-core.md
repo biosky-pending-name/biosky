@@ -27,6 +27,15 @@ An occurrence is "an existence of an Organism at a particular place at a particu
     }
   ],
   "license": "CC-BY-4.0",
+  "taxonId": "gbif:3084746",
+  "taxonRank": "species",
+  "vernacularName": "California Poppy",
+  "kingdom": "Plantae",
+  "phylum": "Tracheophyta",
+  "class": "Magnoliopsida",
+  "order": "Ranunculales",
+  "family": "Papaveraceae",
+  "genus": "Eschscholzia",
   "createdAt": "2024-01-15T10:35:00Z"
 }
 ```
@@ -68,15 +77,17 @@ An occurrence is "an existence of an Organism at a particular place at a particu
 | — | dwc:maximumElevationInMeters | ❌ | Upper elevation bound |
 | — | dwc:minimumDepthInMeters | ❌ | Lower depth bound |
 | — | dwc:maximumDepthInMeters | ❌ | Upper depth bound |
-| — | dwc:kingdom | ❌ | Taxonomic kingdom |
-| — | dwc:phylum | ❌ | Taxonomic phylum |
-| — | dwc:class | ❌ | Taxonomic class |
-| — | dwc:order | ❌ | Taxonomic order |
-| — | dwc:family | ❌ | Taxonomic family |
-| — | dwc:genus | ❌ | Taxonomic genus |
+| `kingdom` | dwc:kingdom | ✅ | Taxonomic kingdom |
+| `phylum` | dwc:phylum | ✅ | Taxonomic phylum |
+| `class` | dwc:class | ✅ | Taxonomic class |
+| `order` | dwc:order | ✅ | Taxonomic order |
+| `family` | dwc:family | ✅ | Taxonomic family |
+| `genus` | dwc:genus | ✅ | Taxonomic genus |
 | — | dwc:specificEpithet | ❌ | Species epithet |
 | — | dwc:infraspecificEpithet | ❌ | Subspecies/variety epithet |
-| — | dwc:vernacularName | ❌ | Common name |
+| `vernacularName` | dwc:vernacularName | ✅ | Common name |
+| `taxonId` | dwc:taxonID | ✅ | External taxon identifier (e.g., gbif:2878688) |
+| `taxonRank` | dwc:taxonRank | ✅ | Taxonomic rank (species, genus, family, etc.) |
 | — | dwc:samplingProtocol | ❌ | Method used for sampling |
 | — | dwc:samplingEffort | ❌ | Effort expended during sampling |
 | — | dwc:eventRemarks | ❌ | Notes about the sampling event |

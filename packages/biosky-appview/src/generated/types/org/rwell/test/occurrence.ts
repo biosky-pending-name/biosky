@@ -34,6 +34,35 @@ export interface Main {
     | (string & {})
   /** Timestamp when this record was created. */
   createdAt: string
+  /** External taxon identifier (e.g., gbif:2878688). Prefixed with source. */
+  taxonId?: string
+  /** The taxonomic rank of the scientific name (e.g., species, genus, family). */
+  taxonRank:
+    | 'kingdom'
+    | 'phylum'
+    | 'class'
+    | 'order'
+    | 'family'
+    | 'genus'
+    | 'species'
+    | 'subspecies'
+    | 'variety'
+    | 'form'
+    | (string & {})
+  /** Common name for the taxon (Darwin Core dwc:vernacularName). */
+  vernacularName?: string
+  /** Taxonomic kingdom (e.g., Animalia, Plantae) (Darwin Core dwc:kingdom). */
+  kingdom?: string
+  /** Taxonomic phylum (Darwin Core dwc:phylum). */
+  phylum?: string
+  /** Taxonomic class (Darwin Core dwc:class). */
+  class?: string
+  /** Taxonomic order (Darwin Core dwc:order). */
+  order?: string
+  /** Taxonomic family (Darwin Core dwc:family). */
+  family?: string
+  /** Taxonomic genus (Darwin Core dwc:genus). */
+  genus?: string
   [k: string]: unknown
 }
 

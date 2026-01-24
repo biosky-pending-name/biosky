@@ -24,6 +24,16 @@ export interface Occurrence {
   };
   verbatimLocality?: string;
   occurrenceRemarks?: string;
+  // Taxonomy fields
+  taxonId?: string;
+  taxonRank?: string;
+  vernacularName?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
   images: string[];
   createdAt: string;
 }

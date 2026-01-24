@@ -327,6 +327,38 @@ export function OccurrenceDetail() {
                 <Typography>{occurrence.occurrenceRemarks}</Typography>
               </Box>
             )}
+
+            {/* Taxonomy Information */}
+            {(occurrence.vernacularName || occurrence.kingdom || occurrence.family) && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Taxonomy
+                </Typography>
+                {occurrence.vernacularName && (
+                  <Typography>{occurrence.vernacularName}</Typography>
+                )}
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                  {occurrence.kingdom && (
+                    <Chip label={occurrence.kingdom} size="small" variant="outlined" />
+                  )}
+                  {occurrence.phylum && (
+                    <Chip label={occurrence.phylum} size="small" variant="outlined" />
+                  )}
+                  {occurrence.class && (
+                    <Chip label={occurrence.class} size="small" variant="outlined" />
+                  )}
+                  {occurrence.order && (
+                    <Chip label={occurrence.order} size="small" variant="outlined" />
+                  )}
+                  {occurrence.family && (
+                    <Chip label={occurrence.family} size="small" variant="outlined" />
+                  )}
+                  {occurrence.genus && (
+                    <Chip label={occurrence.genus} size="small" variant="outlined" sx={{ fontStyle: "italic" }} />
+                  )}
+                </Stack>
+              </Box>
+            )}
           </Stack>
         </Box>
 

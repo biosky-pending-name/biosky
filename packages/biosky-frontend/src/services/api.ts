@@ -175,6 +175,16 @@ export async function submitOccurrence(data: {
   license?: string;
   eventDate: string;
   images?: Array<{ data: string; mimeType: string }>;
+  // Taxonomy fields
+  taxonId?: string;
+  taxonRank?: string;
+  vernacularName?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
 }): Promise<{ uri: string; cid: string }> {
   const response = await fetch(`${API_BASE}/api/occurrences`, {
     method: "POST",
@@ -201,6 +211,16 @@ export async function updateOccurrence(data: {
   notes?: string;
   license?: string;
   eventDate: string;
+  // Taxonomy fields
+  taxonId?: string;
+  taxonRank?: string;
+  vernacularName?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
 }): Promise<{ uri: string; cid: string }> {
   const response = await fetch(`${API_BASE}/api/occurrences`, {
     method: "PUT",
