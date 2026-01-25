@@ -42,6 +42,3 @@ tower = { version = "0.5", features = ["util"] }
 [[bin]]
 name = "biosky-ingester"
 path = "src/main.rs"
-
-[profile.release]
-debug = true

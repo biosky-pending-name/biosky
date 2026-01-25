@@ -52,6 +52,7 @@ pub struct PlcDirectoryResponse {
 pub struct PlcService {
     pub id: String,
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     pub service_type: String,
     #[serde(rename = "serviceEndpoint")]
     pub service_endpoint: String,

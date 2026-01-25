@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum MediaProxyError {
+    #[allow(dead_code)]
     Cache(String),
     Fetch(Box<reqwest::Error>),
     DidResolution(String),

@@ -44,6 +44,3 @@ tempfile = "3"
 [[bin]]
 name = "biosky-media-proxy"
 path = "src/main.rs"
-
-[profile.release]
-debug = true
