@@ -1,0 +1,152 @@
+import { useEffect, useRef } from "react";
+import { Box } from "@mui/material";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+interface LocationMapProps {
+  latitude: number;
+  longitude: number;
+  uncertaintyMeters?: number;
+}
+
+export function LocationMap({
+  latitude,
+  longitude,
+  uncertaintyMeters,
+}: LocationMapProps) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    const mapInstance = new maplibregl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: [
+              "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          },
+        },
+        layers: [
+          {
+            id: "osm",
+            type: "raster",
+            source: "osm",
+          },
+        ],
+      },
+      center: [longitude, latitude],
+      zoom: 14,
+      interactive: true,
+    });
+
+    mapInstance.addControl(
+      new maplibregl.NavigationControl({ showCompass: false }),
+      "bottom-right"
+    );
+
+    mapInstance.on("load", () => {
+      // Add marker
+      new maplibregl.Marker({ color: "#22c55e" })
+        .setLngLat([longitude, latitude])
+        .addTo(mapInstance);
+
+      // Add uncertainty circle if provided
+      if (uncertaintyMeters && uncertaintyMeters > 0) {
+        mapInstance.addSource("uncertainty", {
+          type: "geojson",
+          data: createCircleGeoJSON(longitude, latitude, uncertaintyMeters),
+        });
+
+        mapInstance.addLayer({
+          id: "uncertainty-fill",
+          type: "fill",
+          source: "uncertainty",
+          paint: {
+            "fill-color": "#22c55e",
+            "fill-opacity": 0.15,
+          },
+        });
+
+        mapInstance.addLayer({
+          id: "uncertainty-outline",
+          type: "line",
+          source: "uncertainty",
+          paint: {
+            "line-color": "#22c55e",
+            "line-width": 2,
+            "line-opacity": 0.5,
+          },
+        });
+      }
+    });
+
+    map.current = mapInstance;
+
+    return () => {
+      mapInstance.remove();
+      map.current = null;
+    };
+  }, [latitude, longitude, uncertaintyMeters]);
+
+  return (
+    <Box
+      ref={mapContainer}
+      sx={{
+        width: "100%",
+        height: 200,
+        borderRadius: 1,
+        overflow: "hidden",
+        border: 1,
+        borderColor: "divider",
+      }}
+    />
+  );
+}
+
+// Create a GeoJSON circle polygon from center point and radius in meters
+function createCircleGeoJSON(
+  lng: number,
+  lat: number,
+  radiusMeters: number
+): GeoJSON.FeatureCollection {
+  const points = 64;
+  const coords: [number, number][] = [];
+
+  for (let i = 0; i < points; i++) {
+    const angle = (i / points) * 2 * Math.PI;
+    const dx = radiusMeters * Math.cos(angle);
+    const dy = radiusMeters * Math.sin(angle);
+
+    // Convert meters to degrees (approximate)
+    const latOffset = dy / 111320;
+    const lngOffset = dx / (111320 * Math.cos((lat * Math.PI) / 180));
+
+    coords.push([lng + lngOffset, lat + latOffset]);
+  }
+  coords.push(coords[0]); // Close the polygon
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [coords],
+        },
+      },
+    ],
+  };
+}

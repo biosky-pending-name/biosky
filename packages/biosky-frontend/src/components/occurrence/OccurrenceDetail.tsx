@@ -24,6 +24,7 @@ import type { Occurrence, Identification, Comment } from "../../services/types";
 import { IdentificationPanel } from "../identification/IdentificationPanel";
 import { IdentificationHistory } from "../identification/IdentificationHistory";
 import { CommentSection } from "../comment/CommentSection";
+import { LocationMap } from "../map/LocationMap";
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -377,6 +378,13 @@ export function OccurrenceDetail() {
                   </Typography>
                 )}
               </Typography>
+              <Box sx={{ mt: 1 }}>
+                <LocationMap
+                  latitude={occurrence.location.latitude}
+                  longitude={occurrence.location.longitude}
+                  uncertaintyMeters={occurrence.location.uncertaintyMeters}
+                />
+              </Box>
             </Box>
 
             {occurrence.occurrenceRemarks && (
