@@ -19,6 +19,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import NatureIcon from "@mui/icons-material/Nature";
 import CloseIcon from "@mui/icons-material/Close";
 import { submitIdentification } from "../../services/api";
+import { useAppDispatch } from "../../store";
+import { addToast } from "../../store/uiSlice";
 
 type ConfidenceLevel = "low" | "medium" | "high";
 
@@ -41,6 +43,7 @@ export function IdentificationPanel({
   existingSubjectCount = 1,
   onSuccess,
 }: IdentificationPanelProps) {
+  const dispatch = useAppDispatch();
   const [showSuggestForm, setShowSuggestForm] = useState(false);
   const [taxonName, setTaxonName] = useState("");
   const [comment, setComment] = useState("");
@@ -65,10 +68,10 @@ export function IdentificationPanel({
         isAgreement: true,
         confidence: "high",
       });
-      alert("Your agreement has been recorded!");
+      dispatch(addToast({ message: "Your agreement has been recorded!", type: "success" }));
       onSuccess?.();
     } catch (error) {
-      alert(`Error: ${(error as Error).message}`);
+      dispatch(addToast({ message: `Error: ${(error as Error).message}`, type: "error" }));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +81,7 @@ export function IdentificationPanel({
     e.preventDefault();
 
     if (!taxonName.trim()) {
-      alert("Please enter a species name");
+      dispatch(addToast({ message: "Please enter a species name", type: "error" }));
       return;
     }
 
@@ -99,14 +102,14 @@ export function IdentificationPanel({
       const message = identifyingNewOrganism
         ? "New organism added and identification submitted!"
         : "Your identification has been submitted!";
-      alert(message);
+      dispatch(addToast({ message, type: "success" }));
       setShowSuggestForm(false);
       setTaxonName("");
       setComment("");
       setIdentifyingNewOrganism(false);
       onSuccess?.();
     } catch (error) {
-      alert(`Error: ${(error as Error).message}`);
+      dispatch(addToast({ message: `Error: ${(error as Error).message}`, type: "error" }));
     } finally {
       setIsSubmitting(false);
     }

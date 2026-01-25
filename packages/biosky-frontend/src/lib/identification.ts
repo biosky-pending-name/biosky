@@ -268,7 +268,8 @@ export function createIdentificationUI(
     communityId?: string;
   },
   service: IdentificationService,
-  onSuccess?: () => void
+  onSuccess?: () => void,
+  showToast?: (message: string, type: "success" | "error") => void
 ): void {
   container.innerHTML = `
     <div class="identification-panel">
@@ -326,10 +327,10 @@ export function createIdentificationUI(
         occurrence.cid,
         occurrence.communityId || occurrence.scientificName
       );
-      alert("Your agreement has been recorded!");
+      showToast?.("Your agreement has been recorded!", "success");
       onSuccess?.();
     } catch (error) {
-      alert(`Error: ${(error as Error).message}`);
+      showToast?.(`Error: ${(error as Error).message}`, "error");
     }
   });
 
@@ -347,7 +348,7 @@ export function createIdentificationUI(
     const confidenceSelect = container.querySelector("#confidence-select") as HTMLSelectElement;
 
     if (!taxonInput.value.trim()) {
-      alert("Please enter a species name");
+      showToast?.("Please enter a species name", "error");
       return;
     }
 
@@ -356,11 +357,11 @@ export function createIdentificationUI(
         comment: commentInput.value.trim() || undefined,
         confidence: confidenceSelect.value as ConfidenceLevel,
       });
-      alert("Your identification has been submitted!");
+      showToast?.("Your identification has been submitted!", "success");
       suggestForm?.classList.add("hidden");
       onSuccess?.();
     } catch (error) {
-      alert(`Error: ${(error as Error).message}`);
+      showToast?.(`Error: ${(error as Error).message}`, "error");
     }
   });
 }
