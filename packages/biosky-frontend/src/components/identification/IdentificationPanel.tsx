@@ -10,9 +10,14 @@ import {
   InputLabel,
   Stack,
   Paper,
+  Divider,
+  Collapse,
+  Link,
 } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import EditIcon from "@mui/icons-material/Edit";
+import NatureIcon from "@mui/icons-material/Nature";
+import CloseIcon from "@mui/icons-material/Close";
 import { submitIdentification } from "../../services/api";
 
 type ConfidenceLevel = "low" | "medium" | "high";
@@ -25,12 +30,15 @@ interface IdentificationPanelProps {
     communityId?: string;
   };
   subjectIndex?: number;
+  /** Number of existing subjects in this observation (used to calculate next available index) */
+  existingSubjectCount?: number;
   onSuccess?: () => void;
 }
 
 export function IdentificationPanel({
   occurrence,
   subjectIndex = 0,
+  existingSubjectCount = 1,
   onSuccess,
 }: IdentificationPanelProps) {
   const [showSuggestForm, setShowSuggestForm] = useState(false);
@@ -38,6 +46,10 @@ export function IdentificationPanel({
   const [comment, setComment] = useState("");
   const [confidence, setConfidence] = useState<ConfidenceLevel>("medium");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [identifyingNewOrganism, setIdentifyingNewOrganism] = useState(false);
+
+  // Calculate the next available subject index for new organisms
+  const nextSubjectIndex = existingSubjectCount;
 
   const currentId =
     occurrence.communityId || occurrence.scientificName || "Unknown";
@@ -70,21 +82,28 @@ export function IdentificationPanel({
       return;
     }
 
+    // Use next available index if identifying a new organism
+    const targetSubjectIndex = identifyingNewOrganism ? nextSubjectIndex : subjectIndex;
+
     setIsSubmitting(true);
     try {
       await submitIdentification({
         occurrenceUri: occurrence.uri,
         occurrenceCid: occurrence.cid,
-        subjectIndex,
+        subjectIndex: targetSubjectIndex,
         taxonName: taxonName.trim(),
         comment: comment.trim() || undefined,
         confidence,
         isAgreement: false,
       });
-      alert("Your identification has been submitted!");
+      const message = identifyingNewOrganism
+        ? "New organism added and identification submitted!"
+        : "Your identification has been submitted!";
+      alert(message);
       setShowSuggestForm(false);
       setTaxonName("");
       setComment("");
+      setIdentifyingNewOrganism(false);
       onSuccess?.();
     } catch (error) {
       alert(`Error: ${(error as Error).message}`);
@@ -163,10 +182,71 @@ export function IdentificationPanel({
             </Select>
           </FormControl>
 
+          {/* Different organism toggle */}
+          <Box sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Collapse in={!identifyingNewOrganism}>
+              <Link
+                component="button"
+                type="button"
+                variant="body2"
+                onClick={() => setIdentifyingNewOrganism(true)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  color: "text.secondary",
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                }}
+              >
+                <NatureIcon fontSize="small" />
+                Identify a different organism in this photo
+              </Link>
+            </Collapse>
+            <Collapse in={identifyingNewOrganism}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  bgcolor: "action.hover",
+                  borderColor: "primary.main",
+                }}
+              >
+                <Stack direction="row" alignItems="flex-start" spacing={1}>
+                  <NatureIcon color="primary" sx={{ mt: 0.5 }} />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" fontWeight="medium" color="primary.main">
+                      Adding organism #{nextSubjectIndex + 1}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
+                      This creates a new organism in this observation. Use this when multiple
+                      species are visible (e.g., a butterfly AND the flower it's on).
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5, fontStyle: "italic" }}>
+                      For a different opinion on the same organism, cancel this and just submit your ID.
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => setIdentifyingNewOrganism(false)}
+                    sx={{ minWidth: "auto", p: 0.5 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </Button>
+                </Stack>
+              </Paper>
+            </Collapse>
+          </Box>
+
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
             <Button
               color="inherit"
-              onClick={() => setShowSuggestForm(false)}
+              onClick={() => {
+                setShowSuggestForm(false);
+                setIdentifyingNewOrganism(false);
+              }}
             >
               Cancel
             </Button>

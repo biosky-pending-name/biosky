@@ -415,6 +415,7 @@ export function OccurrenceDetail() {
               communityId: currentSubject?.communityId || occurrence.communityId,
             }}
             subjectIndex={selectedSubject}
+            existingSubjectCount={occurrence.subjects?.length ?? 1}
             onSuccess={handleIdentificationSuccess}
           />
         ) : (
