@@ -1,5 +1,30 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { PaletteMode } from "@mui/material";
 import type { Occurrence } from "../services/types";
+
+const THEME_STORAGE_KEY = "biosky-theme-mode";
+
+type ThemeMode = PaletteMode | "system";
+
+function getSystemTheme(): PaletteMode {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getStoredTheme(): ThemeMode {
+  if (typeof window === "undefined") return "system";
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "dark" || stored === "light" || stored === "system") {
+    return stored;
+  }
+  return "system";
+}
+
+function getEffectiveTheme(mode: ThemeMode): PaletteMode {
+  return mode === "system" ? getSystemTheme() : mode;
+}
 
 interface Toast {
   id: string;
@@ -13,7 +38,11 @@ interface UIState {
   editingOccurrence: Occurrence | null;
   toasts: Toast[];
   currentLocation: { lat: number; lng: number } | null;
+  themeMode: ThemeMode;
+  effectiveTheme: PaletteMode;
 }
+
+const storedTheme = getStoredTheme();
 
 const initialState: UIState = {
   loginModalOpen: false,
@@ -21,6 +50,8 @@ const initialState: UIState = {
   editingOccurrence: null,
   toasts: [],
   currentLocation: null,
+  themeMode: storedTheme,
+  effectiveTheme: getEffectiveTheme(storedTheme),
 };
 
 const uiSlice = createSlice({
@@ -63,6 +94,16 @@ const uiSlice = createSlice({
     ) => {
       state.currentLocation = action.payload;
     },
+    setThemeMode: (state, action: PayloadAction<ThemeMode>) => {
+      state.themeMode = action.payload;
+      state.effectiveTheme = getEffectiveTheme(action.payload);
+      localStorage.setItem(THEME_STORAGE_KEY, action.payload);
+    },
+    updateSystemTheme: (state) => {
+      if (state.themeMode === "system") {
+        state.effectiveTheme = getSystemTheme();
+      }
+    },
   },
 });
 
@@ -75,6 +116,10 @@ export const {
   addToast,
   removeToast,
   setCurrentLocation,
+  setThemeMode,
+  updateSystemTheme,
 } = uiSlice.actions;
+
+export type { ThemeMode };
 
 export default uiSlice.reducer;

@@ -47,8 +47,9 @@ export function FeedView() {
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        borderLeft: { sm: "1px solid #333" },
-        borderRight: { sm: "1px solid #333" },
+        borderLeft: { sm: 1 },
+        borderRight: { sm: 1 },
+        borderColor: "divider",
       }}
     >
       <Tabs

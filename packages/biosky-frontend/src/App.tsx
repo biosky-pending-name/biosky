@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
-import theme from "./theme";
-import { store, useAppDispatch } from "./store";
+import { getTheme } from "./theme";
+import { store, useAppDispatch, useAppSelector } from "./store";
 import { checkAuth } from "./store/authSlice";
+import { updateSystemTheme } from "./store/uiSlice";
 import { Header } from "./components/layout/Header";
 import { BottomNav } from "./components/layout/BottomNav";
 import { FeedView } from "./components/feed/FeedView";
@@ -24,6 +25,16 @@ function AppContent() {
 
   useEffect(() => {
     dispatch(checkAuth());
+  }, [dispatch]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      dispatch(updateSystemTheme());
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, [dispatch]);
 
   return (
@@ -57,13 +68,22 @@ function AppContent() {
   );
 }
 
+function ThemedApp() {
+  const effectiveTheme = useAppSelector((state) => state.ui.effectiveTheme);
+  const theme = useMemo(() => getTheme(effectiveTheme), [effectiveTheme]);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
 export function App() {
   return (
     <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <AppContent />
-      </ThemeProvider>
+      <ThemedApp />
     </Provider>
   );
 }

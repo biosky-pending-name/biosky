@@ -119,8 +119,9 @@ export function ProfileView() {
         display: "flex",
         flexDirection: "column",
         overflow: "auto",
-        borderLeft: { sm: "1px solid #333" },
-        borderRight: { sm: "1px solid #333" },
+        borderLeft: { sm: 1 },
+        borderRight: { sm: 1 },
+        borderColor: "divider",
       }}
     >
       {/* Profile Header */}

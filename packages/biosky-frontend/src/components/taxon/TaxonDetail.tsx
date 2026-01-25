@@ -12,7 +12,7 @@ import {
   Divider,
   Card,
   CardMedia,
-  Link,
+  Link as MuiLink,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -131,8 +131,9 @@ export function TaxonDetail() {
         display: "flex",
         flexDirection: "column",
         overflow: "auto",
-        borderLeft: { sm: "1px solid #333" },
-        borderRight: { sm: "1px solid #333" },
+        borderLeft: { sm: 1 },
+        borderRight: { sm: 1 },
+        borderColor: "divider",
       }}
     >
       {/* Header */}
@@ -334,14 +335,14 @@ export function TaxonDetail() {
               {taxon.references.slice(0, 5).map((r, idx) => (
                 <Typography key={idx} variant="caption" color="text.secondary">
                   {r.link || r.doi ? (
-                    <Link
+                    <MuiLink
                       href={r.link || `https://doi.org/${r.doi}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       color="primary"
                     >
                       {r.citation}
-                    </Link>
+                    </MuiLink>
                   ) : (
                     r.citation
                   )}
