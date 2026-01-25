@@ -58,19 +58,9 @@ export const LocationSchema = z
 // Occurrence Schemas
 // ============================================================================
 
-export const OccurrenceSchema = z
+export const EffectiveTaxonomySchema = z
   .object({
-    uri: z.string().describe("AT Protocol URI"),
-    cid: z.string().describe("Content identifier"),
-    observer: ProfileSchema.describe("Primary observer"),
-    observers: z.array(ObserverSchema).describe("All observers including co-observers"),
-    scientificName: z.string().optional().describe("Scientific name"),
-    communityId: z.string().optional().describe("Community ID for subject 0 (backward compat)"),
-    subjects: z.array(SubjectSchema).describe("All subjects with their community IDs"),
-    eventDate: z.string().datetime().describe("Date of observation"),
-    location: LocationSchema,
-    verbatimLocality: z.string().optional(),
-    occurrenceRemarks: z.string().optional(),
+    scientificName: z.string(),
     taxonId: z.string().optional(),
     taxonRank: z.string().optional(),
     vernacularName: z.string().optional(),
@@ -80,6 +70,32 @@ export const OccurrenceSchema = z
     order: z.string().optional(),
     family: z.string().optional(),
     genus: z.string().optional(),
+  })
+  .openapi("EffectiveTaxonomy");
+
+export const OccurrenceSchema = z
+  .object({
+    uri: z.string().describe("AT Protocol URI"),
+    cid: z.string().describe("Content identifier"),
+    observer: ProfileSchema.describe("Primary observer"),
+    observers: z.array(ObserverSchema).describe("All observers including co-observers"),
+    scientificName: z.string().optional().describe("[DEPRECATED] Scientific name from record - use effectiveTaxonomy instead"),
+    communityId: z.string().optional().describe("Community ID for subject 0 (backward compat)"),
+    subjects: z.array(SubjectSchema).describe("All subjects with their community IDs"),
+    eventDate: z.string().datetime().describe("Date of observation"),
+    location: LocationSchema,
+    verbatimLocality: z.string().optional(),
+    occurrenceRemarks: z.string().optional(),
+    taxonId: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    taxonRank: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    vernacularName: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    kingdom: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    phylum: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    class: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    order: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    family: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    genus: z.string().optional().describe("[DEPRECATED] Use effectiveTaxonomy instead"),
+    effectiveTaxonomy: EffectiveTaxonomySchema.optional().describe("Taxonomy from winning identification"),
     images: z.array(z.string()).describe("Image URLs"),
     createdAt: z.string().datetime(),
     identificationCount: z.number().int().optional(),
@@ -378,6 +394,7 @@ export type Profile = z.infer<typeof ProfileSchema>;
 export type Observer = z.infer<typeof ObserverSchema>;
 export type Subject = z.infer<typeof SubjectSchema>;
 export type Location = z.infer<typeof LocationSchema>;
+export type EffectiveTaxonomy = z.infer<typeof EffectiveTaxonomySchema>;
 export type Occurrence = z.infer<typeof OccurrenceSchema>;
 export type CreateOccurrenceRequest = z.infer<typeof CreateOccurrenceRequestSchema>;
 export type CreateOccurrenceResponse = z.infer<typeof CreateOccurrenceResponseSchema>;

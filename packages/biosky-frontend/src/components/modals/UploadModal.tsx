@@ -260,7 +260,7 @@ export function UploadModal() {
       if (isEditMode && editingOccurrence) {
         const result = await updateOccurrence({
           uri: editingOccurrence.uri,
-          scientificName: species || "Unknown species",
+          scientificName: species.trim() || undefined,
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
           notes: notes || undefined,
@@ -281,7 +281,7 @@ export function UploadModal() {
         );
       } else {
         const result = await submitOccurrence({
-          scientificName: species || "Unknown species",
+          scientificName: species.trim() || undefined,
           latitude: parseFloat(lat),
           longitude: parseFloat(lng),
           notes: notes || undefined,
@@ -373,8 +373,8 @@ export function UploadModal() {
             <TextField
               {...params}
               fullWidth
-              label="Species"
-              placeholder="e.g. Eschscholzia californica"
+              label="Species (optional)"
+              placeholder="e.g. Eschscholzia californica - leave blank if unknown"
               margin="normal"
             />
           )}

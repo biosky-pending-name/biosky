@@ -157,11 +157,26 @@ export function OccurrenceDetail() {
 
   // Find the current subject's data
   const currentSubject = occurrence.subjects?.find((s) => s.index === selectedSubject);
+
+  // Get taxonomy from effectiveTaxonomy (preferred), falling back to legacy fields
+  const taxonomy = occurrence.effectiveTaxonomy || {
+    scientificName: occurrence.scientificName,
+    vernacularName: occurrence.vernacularName,
+    kingdom: occurrence.kingdom,
+    phylum: occurrence.phylum,
+    class: occurrence.class,
+    order: occurrence.order,
+    family: occurrence.family,
+    genus: occurrence.genus,
+    taxonId: occurrence.taxonId,
+    taxonRank: occurrence.taxonRank,
+  };
+
   const species =
     currentSubject?.communityId ||
     occurrence.communityId ||
-    occurrence.scientificName ||
-    "Unknown species";
+    taxonomy.scientificName ||
+    undefined;
 
   // Check if there are multiple subjects
   const hasMultipleSubjects = occurrence.subjects && occurrence.subjects.length > 1;
@@ -175,8 +190,9 @@ export function OccurrenceDetail() {
         display: "flex",
         flexDirection: "column",
         overflow: "auto",
-        borderLeft: { sm: "1px solid #333" },
-        borderRight: { sm: "1px solid #333" },
+        borderLeft: { sm: 1 },
+        borderRight: { sm: 1 },
+        borderColor: "divider",
       }}
     >
       {/* Header */}
@@ -271,53 +287,6 @@ export function OccurrenceDetail() {
 
       {/* Content */}
       <Box sx={{ p: 3 }}>
-        {/* Subject Tabs - only show if multiple subjects */}
-        {hasMultipleSubjects && (
-          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-            <Tabs
-              value={selectedSubject}
-              onChange={(_, newValue) => setSelectedSubject(newValue)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              {occurrence.subjects.map((subject) => (
-                <Tab
-                  key={subject.index}
-                  value={subject.index}
-                  label={
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography variant="body2">
-                        Subject {subject.index + 1}
-                      </Typography>
-                      {subject.communityId && (
-                        <Chip
-                          label={subject.communityId}
-                          size="small"
-                          sx={{ fontStyle: "italic", maxWidth: 120 }}
-                        />
-                      )}
-                    </Stack>
-                  }
-                />
-              ))}
-            </Tabs>
-          </Box>
-        )}
-
-        <TaxonLink
-          name={species}
-          taxonId={occurrence.taxonId}
-          rank={occurrence.taxonRank || "species"}
-        />
-
-        {occurrence.scientificName &&
-          occurrence.communityId &&
-          occurrence.scientificName !== occurrence.communityId && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Originally identified as: {occurrence.scientificName}
-            </Typography>
-          )}
-
         {/* Observer */}
         <Stack
           direction="row"
@@ -326,7 +295,6 @@ export function OccurrenceDetail() {
           component={Link}
           to={`/profile/${encodeURIComponent(occurrence.observer.did)}`}
           sx={{
-            mt: 2,
             textDecoration: "none",
             color: "inherit",
             "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
@@ -346,8 +314,8 @@ export function OccurrenceDetail() {
           </Box>
         </Stack>
 
-        {/* Details */}
-        <Box sx={{ mt: 3 }}>
+        {/* Observation Details (shared across all subjects) */}
+        <Box sx={{ mt: 2 }}>
           <Stack spacing={2}>
             <Box>
               <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -414,7 +382,7 @@ export function OccurrenceDetail() {
             )}
 
             {/* Taxonomy Information */}
-            {(occurrence.vernacularName || occurrence.kingdom || occurrence.family) && (
+            {(taxonomy.vernacularName || taxonomy.kingdom || taxonomy.family) && (
               <Box>
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                   <AccountTreeIcon sx={{ fontSize: 14, color: "text.secondary" }} />
@@ -422,27 +390,27 @@ export function OccurrenceDetail() {
                     Taxonomy
                   </Typography>
                 </Stack>
-                {occurrence.vernacularName && (
-                  <Typography>{occurrence.vernacularName}</Typography>
+                {taxonomy.vernacularName && (
+                  <Typography>{taxonomy.vernacularName}</Typography>
                 )}
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5, gap: 0.5 }}>
-                  {occurrence.kingdom && (
-                    <TaxonLink name={occurrence.kingdom} rank="kingdom" variant="chip" italic={false} />
+                  {taxonomy.kingdom && (
+                    <TaxonLink name={taxonomy.kingdom} rank="kingdom" variant="chip" italic={false} />
                   )}
-                  {occurrence.phylum && (
-                    <TaxonLink name={occurrence.phylum} rank="phylum" variant="chip" italic={false} />
+                  {taxonomy.phylum && (
+                    <TaxonLink name={taxonomy.phylum} rank="phylum" variant="chip" italic={false} />
                   )}
-                  {occurrence.class && (
-                    <TaxonLink name={occurrence.class} rank="class" variant="chip" italic={false} />
+                  {taxonomy.class && (
+                    <TaxonLink name={taxonomy.class} rank="class" variant="chip" italic={false} />
                   )}
-                  {occurrence.order && (
-                    <TaxonLink name={occurrence.order} rank="order" variant="chip" italic={false} />
+                  {taxonomy.order && (
+                    <TaxonLink name={taxonomy.order} rank="order" variant="chip" italic={false} />
                   )}
-                  {occurrence.family && (
-                    <TaxonLink name={occurrence.family} rank="family" variant="chip" italic={false} />
+                  {taxonomy.family && (
+                    <TaxonLink name={taxonomy.family} rank="family" variant="chip" italic={false} />
                   )}
-                  {occurrence.genus && (
-                    <TaxonLink name={occurrence.genus} rank="genus" variant="chip" />
+                  {taxonomy.genus && (
+                    <TaxonLink name={taxonomy.genus} rank="genus" variant="chip" />
                   )}
                 </Stack>
               </Box>
@@ -450,36 +418,92 @@ export function OccurrenceDetail() {
           </Stack>
         </Box>
 
-        {/* Identification History */}
-        {identifications.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <IdentificationHistory
-              identifications={identifications}
-              subjectIndex={selectedSubject}
-            />
-          </Box>
-        )}
+        {/* Subject-specific content (identification) */}
+        <Box sx={{ mt: 3 }}>
+          {/* Subject Tabs - only show if multiple subjects */}
+          {hasMultipleSubjects && (
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+              <Tabs
+                value={selectedSubject}
+                onChange={(_, newValue) => setSelectedSubject(newValue)}
+                variant="scrollable"
+                scrollButtons="auto"
+              >
+                {occurrence.subjects.map((subject) => (
+                  <Tab
+                    key={subject.index}
+                    value={subject.index}
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body2">
+                          Subject {subject.index + 1}
+                        </Typography>
+                        {subject.communityId && (
+                          <Chip
+                            label={subject.communityId}
+                            size="small"
+                            sx={{ fontStyle: "italic", maxWidth: 120 }}
+                          />
+                        )}
+                      </Stack>
+                    }
+                  />
+                ))}
+              </Tabs>
+            </Box>
+          )}
 
-        {/* Identification Panel */}
-        {user ? (
-          <IdentificationPanel
-            occurrence={{
-              uri: occurrence.uri,
-              cid: occurrence.cid,
-              scientificName: occurrence.scientificName,
-              communityId: currentSubject?.communityId || occurrence.communityId,
-            }}
-            subjectIndex={selectedSubject}
-            existingSubjectCount={occurrence.subjects?.length ?? 1}
-            onSuccess={handleIdentificationSuccess}
-          />
-        ) : (
-          <Paper sx={{ mt: 3, p: 2, textAlign: "center", bgcolor: "background.paper" }}>
-            <Typography color="text.secondary">
-              Log in to add an identification
+          {species ? (
+            <TaxonLink
+              name={species}
+              taxonId={taxonomy.taxonId}
+              rank={taxonomy.taxonRank || "species"}
+            />
+          ) : (
+            <Typography variant="h5" sx={{ fontWeight: 600, fontStyle: "italic", color: "text.secondary" }}>
+              Unidentified
             </Typography>
-          </Paper>
-        )}
+          )}
+
+          {occurrence.scientificName &&
+            occurrence.communityId &&
+            occurrence.scientificName !== occurrence.communityId && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Originally identified as: {occurrence.scientificName}
+              </Typography>
+            )}
+
+          {/* Identification History */}
+          {identifications.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <IdentificationHistory
+                identifications={identifications}
+                subjectIndex={selectedSubject}
+              />
+            </Box>
+          )}
+
+          {/* Identification Panel */}
+          {user ? (
+            <IdentificationPanel
+              occurrence={{
+                uri: occurrence.uri,
+                cid: occurrence.cid,
+                scientificName: occurrence.scientificName,
+                communityId: currentSubject?.communityId || occurrence.communityId,
+              }}
+              subjectIndex={selectedSubject}
+              existingSubjectCount={occurrence.subjects?.length ?? 1}
+              onSuccess={handleIdentificationSuccess}
+            />
+          ) : (
+            <Paper sx={{ mt: 3, p: 2, textAlign: "center", bgcolor: "background.paper" }}>
+              <Typography color="text.secondary">
+                Log in to add an identification
+              </Typography>
+            </Paper>
+          )}
+        </Box>
 
         {/* Discussion / Comments */}
         <Box sx={{ mt: 3 }}>

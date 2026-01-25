@@ -59,8 +59,16 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
     ? `@${owner.handle}`
     : "";
   const timeAgo = formatTimeAgo(new Date(occurrence.createdAt));
+
+  // Use effectiveTaxonomy (preferred) or fall back to legacy fields
+  const taxonomy = occurrence.effectiveTaxonomy || {
+    scientificName: occurrence.scientificName,
+    taxonId: occurrence.taxonId,
+    taxonRank: occurrence.taxonRank,
+  };
   const species =
-    occurrence.communityId || occurrence.scientificName || "Unknown species";
+    occurrence.communityId || taxonomy.scientificName || undefined;
+
   const imageUrl = occurrence.images[0]
     ? getImageUrl(occurrence.images[0])
     : "";
@@ -235,19 +243,26 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
           </Stack>
         ) : (
           <Box sx={{ my: 0.5, fontSize: "1.1rem" }}>
-            <TaxonLink
-              name={species}
-              taxonId={occurrence.taxonId}
-              rank={occurrence.taxonRank || "species"}
-              onClick={(e) => e.stopPropagation()}
-            />
+            {species ? (
+              <TaxonLink
+                name={species}
+                taxonId={taxonomy.taxonId}
+                rank={taxonomy.taxonRank || "species"}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Typography sx={{ fontStyle: "italic", color: "text.secondary" }}>
+                Unidentified
+              </Typography>
+            )}
           </Box>
         )}
 
         {occurrence.occurrenceRemarks && (
           <Typography
             variant="body2"
-            sx={{ color: "#ccc", lineHeight: 1.4, my: 0.5 }}
+            color="text.secondary"
+            sx={{ lineHeight: 1.4, my: 0.5 }}
           >
             {occurrence.occurrenceRemarks}
           </Typography>
@@ -263,7 +278,7 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
           <CardMedia
             component="img"
             image={imageUrl}
-            alt={species}
+            alt={species || "Observation photo"}
             loading="lazy"
             sx={{
               mt: 1.5,

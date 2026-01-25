@@ -12,6 +12,7 @@ export type {
   Observer,
   Subject,
   Location,
+  EffectiveTaxonomy,
   Occurrence,
   Identification,
   Comment,

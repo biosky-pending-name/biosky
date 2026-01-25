@@ -28,6 +28,19 @@ interface SubjectResponse {
   identificationCount: number;
 }
 
+interface EffectiveTaxonomy {
+  scientificName: string;
+  taxonId?: string | undefined;
+  taxonRank?: string | undefined;
+  vernacularName?: string | undefined;
+  kingdom?: string | undefined;
+  phylum?: string | undefined;
+  class?: string | undefined;
+  order?: string | undefined;
+  family?: string | undefined;
+  genus?: string | undefined;
+}
+
 export interface OccurrenceResponse {
   uri: string;
   cid: string;
@@ -40,6 +53,7 @@ export interface OccurrenceResponse {
   observers: ObserverInfo[];
   scientificName?: string | undefined;
   communityId?: string | undefined;
+  effectiveTaxonomy?: EffectiveTaxonomy | undefined;
   subjects: SubjectResponse[];
   eventDate: string;
   location: {
@@ -148,6 +162,32 @@ export async function enrichOccurrences(
       // Get community ID for subject 0 (backward compat)
       const communityId = await db.getCommunityId(row.uri, 0);
 
+      // Get effective taxonomy from the winning identification for subject 0
+      let effectiveTaxonomy: EffectiveTaxonomy | undefined;
+      if (communityId) {
+        const identifications = await db.getIdentificationsForOccurrence(row.uri);
+        // Find an identification that matches the community ID
+        const winningId = identifications.find(
+          (id) =>
+            id.subject_index === 0 &&
+            id.scientific_name?.toLowerCase() === communityId.toLowerCase()
+        );
+        if (winningId) {
+          effectiveTaxonomy = {
+            scientificName: winningId.scientific_name,
+            taxonId: winningId.taxon_id || undefined,
+            taxonRank: winningId.taxon_rank || undefined,
+            vernacularName: winningId.vernacular_name || undefined,
+            kingdom: winningId.kingdom || undefined,
+            phylum: winningId.phylum || undefined,
+            class: winningId.class || undefined,
+            order: winningId.order || undefined,
+            family: winningId.family || undefined,
+            genus: winningId.genus || undefined,
+          };
+        }
+      }
+
       return {
         uri: row.uri,
         cid: row.cid,
@@ -160,6 +200,7 @@ export async function enrichOccurrences(
         observers,
         scientificName: row.scientific_name || undefined,
         communityId: communityId || undefined,
+        effectiveTaxonomy,
         subjects,
         eventDate: row.event_date.toISOString(),
         location: {

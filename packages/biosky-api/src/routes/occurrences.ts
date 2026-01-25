@@ -255,7 +255,7 @@ export function createOccurrenceRoutes(
         }
       }
 
-      // Fetch taxonomy hierarchy from GBIF if scientificName is provided
+      // Fetch taxonomy hierarchy from GBIF if scientificName is provided (for identification record)
       let taxon: {
         id?: string | undefined;
         commonName?: string | undefined;
@@ -275,10 +275,10 @@ export function createOccurrenceRoutes(
       // Reverse geocode to get administrative geography fields
       const geocoded = await geocoding.reverseGeocode(latitude, longitude);
 
-      // Build the record
+      // Build the occurrence record WITHOUT taxonomy fields
+      // Taxonomy data goes into the identification record instead
       const record: Record<string, unknown> = {
         $type: "org.rwell.test.occurrence",
-        scientificName: scientificName || undefined,
         eventDate: eventDate || new Date().toISOString(),
         location: {
           decimalLatitude: String(latitude),
@@ -296,15 +296,6 @@ export function createOccurrenceRoutes(
         },
         notes: notes || undefined,
         license: license || undefined,
-        taxonId: taxonId || taxon?.id,
-        taxonRank: taxonRank || taxon?.rank,
-        vernacularName: vernacularName || taxon?.commonName,
-        kingdom: kingdom || taxon?.kingdom,
-        phylum: phylum || taxon?.phylum,
-        class: taxonomyClass || taxon?.class,
-        order: order || taxon?.order,
-        family: family || taxon?.family,
-        genus: genus || taxon?.genus,
         createdAt: new Date().toISOString(),
       };
 
@@ -350,10 +341,53 @@ export function createOccurrenceRoutes(
       // Sync observers table
       await db.syncOccurrenceObservers(result.uri, sessionDid, coObservers);
 
+      // Create identification record if scientificName was provided
+      let identificationUri: string | undefined;
+      let identificationCid: string | undefined;
+      if (scientificName) {
+        const identificationRecord = {
+          $type: "org.rwell.test.identification",
+          subject: {
+            uri: result.uri,
+            cid: result.cid,
+          },
+          subjectIndex: 0,
+          taxonName: scientificName.trim(),
+          taxonRank: taxonRank || taxon?.rank || "species",
+          isAgreement: false,
+          confidence: "high",
+          createdAt: new Date().toISOString(),
+          taxonId: taxonId || taxon?.id,
+          vernacularName: vernacularName || taxon?.commonName,
+          kingdom: kingdom || taxon?.kingdom,
+          phylum: phylum || taxon?.phylum,
+          class: taxonomyClass || taxon?.class,
+          order: order || taxon?.order,
+          family: family || taxon?.family,
+          genus: genus || taxon?.genus,
+        };
+
+        const idResult = await internalClient.createRecord(
+          sessionDid,
+          "org.rwell.test.identification",
+          identificationRecord
+        );
+
+        if (idResult.success && idResult.uri) {
+          identificationUri = idResult.uri;
+          identificationCid = idResult.cid;
+          logger.info({ uri: idResult.uri, occurrenceUri: result.uri }, "Created initial identification via internal RPC");
+        } else {
+          logger.error({ error: idResult.error }, "Failed to create initial identification");
+        }
+      }
+
       res.status(201).json({
         success: true,
         uri: result.uri,
         cid: result.cid,
+        identificationUri,
+        identificationCid,
         message: "Observation posted to AT Protocol network",
       });
     } catch (error) {
