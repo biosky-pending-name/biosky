@@ -17,6 +17,12 @@ const createMockDatabase = () => ({
   saveOccurrencePrivateData: vi.fn().mockResolvedValue(undefined),
   getOccurrencePrivateData: vi.fn().mockResolvedValue(null),
   deleteOccurrencePrivateData: vi.fn().mockResolvedValue(undefined),
+  // Multi-user observation methods
+  getOccurrenceObservers: vi.fn().mockResolvedValue([]),
+  addOccurrenceObserver: vi.fn().mockResolvedValue(undefined),
+  removeOccurrenceObserver: vi.fn().mockResolvedValue(undefined),
+  syncOccurrenceObservers: vi.fn().mockResolvedValue(undefined),
+  isOccurrenceOwner: vi.fn().mockResolvedValue(false),
 });
 
 const createMockIdentityResolver = () => ({

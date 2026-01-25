@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { closeUploadModal, addToast } from "../../store/uiSlice";
 import {
@@ -76,6 +77,8 @@ export function UploadModal() {
   const [suggestions, setSuggestions] = useState<TaxaResult[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<ImagePreview[]>([]);
+  const [coObservers, setCoObservers] = useState<string[]>([]);
+  const [coObserverInput, setCoObserverInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_IMAGES = 10;
@@ -117,6 +120,20 @@ export function UploadModal() {
     setSuggestions([]);
     images.forEach((img) => URL.revokeObjectURL(img.preview));
     setImages([]);
+    setCoObservers([]);
+    setCoObserverInput("");
+  };
+
+  const handleAddCoObserver = () => {
+    const did = coObserverInput.trim();
+    if (did && did.startsWith("did:") && !coObservers.includes(did) && did !== user?.did) {
+      setCoObservers((prev) => [...prev, did]);
+      setCoObserverInput("");
+    }
+  };
+
+  const handleRemoveCoObserver = (did: string) => {
+    setCoObservers((prev) => prev.filter((d) => d !== did));
   };
 
   const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -249,6 +266,7 @@ export function UploadModal() {
           notes: notes || undefined,
           license,
           eventDate: editingOccurrence.eventDate || new Date().toISOString(),
+          recordedBy: coObservers.length > 0 ? coObservers : undefined,
         });
 
         // Wait for the update to be processed
@@ -270,6 +288,7 @@ export function UploadModal() {
           license,
           eventDate: new Date().toISOString(),
           images: imageData.length > 0 ? imageData : undefined,
+          recordedBy: coObservers.length > 0 ? coObservers : undefined,
         });
 
         // Wait for the occurrence to be processed by the ingester
@@ -450,6 +469,53 @@ export function UploadModal() {
             ))}
           </Select>
         </FormControl>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+          Co-observers (optional)
+        </Typography>
+
+        <Stack direction="row" spacing={1} alignItems="flex-start">
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Enter DID (e.g., did:plc:abc123...)"
+            value={coObserverInput}
+            onChange={(e) => setCoObserverInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddCoObserver();
+              }
+            }}
+          />
+          <Button
+            variant="outlined"
+            onClick={handleAddCoObserver}
+            disabled={!coObserverInput.trim().startsWith("did:")}
+            startIcon={<PersonAddIcon />}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Add
+          </Button>
+        </Stack>
+
+        {coObservers.length > 0 && (
+          <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
+            {coObservers.map((did) => (
+              <Chip
+                key={did}
+                label={did.slice(0, 25) + "..."}
+                size="small"
+                onDelete={() => handleRemoveCoObserver(did)}
+                sx={{ maxWidth: 200 }}
+              />
+            ))}
+          </Stack>
+        )}
+
+        <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.5 }}>
+          Add other observers who participated in this sighting
+        </Typography>
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
           Photos (optional)

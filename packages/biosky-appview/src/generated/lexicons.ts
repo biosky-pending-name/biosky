@@ -332,6 +332,15 @@ export const schemaDict = {
               description: 'Taxonomic genus (Darwin Core dwc:genus).',
               maxLength: 64,
             },
+            recordedBy: {
+              type: 'array',
+              description:
+                'DIDs of co-observers who participated in this observation. The record creator is the primary observer.',
+              items: {
+                type: 'string',
+              },
+              maxLength: 10,
+            },
           },
         },
       },

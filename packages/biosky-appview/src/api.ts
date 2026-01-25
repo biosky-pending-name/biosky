@@ -74,6 +74,14 @@ interface SubjectResponse {
   identificationCount: number;
 }
 
+interface ObserverInfo {
+  did: string;
+  handle?: string;
+  displayName?: string;
+  avatar?: string;
+  role: "owner" | "co-observer";
+}
+
 interface OccurrenceResponse {
   uri: string;
   cid: string;
@@ -83,6 +91,7 @@ interface OccurrenceResponse {
     displayName?: string;
     avatar?: string;
   };
+  observers: ObserverInfo[];
   // Darwin Core fields
   scientificName?: string;
   communityId?: string; // Keep for backward compat (refers to subject 0)
@@ -229,6 +238,7 @@ export class AppViewServer {
           order,
           family,
           genus,
+          recordedBy,
         } = req.body;
 
         if (!latitude || !longitude) {
@@ -335,6 +345,19 @@ export class AppViewServer {
           record["associatedMedia"] = associatedMedia;
         }
 
+        // Add co-observers if provided
+        const coObservers: string[] = [];
+        if (recordedBy && Array.isArray(recordedBy)) {
+          for (const did of recordedBy) {
+            if (typeof did === "string" && did !== sessionDid) {
+              coObservers.push(did);
+            }
+          }
+          if (coObservers.length > 0) {
+            record["recordedBy"] = coObservers;
+          }
+        }
+
         // Create the record on the user's PDS
         const result = await agent.com.atproto.repo.createRecord({
           repo: sessionDid,
@@ -351,6 +374,9 @@ export class AppViewServer {
           longitude,
           "open", // Default geoprivacy for now
         );
+
+        // Sync observers table (owner + co-observers)
+        await this.db.syncOccurrenceObservers(result.data.uri, sessionDid, coObservers);
 
         res.status(201).json({
           success: true,
@@ -384,6 +410,7 @@ export class AppViewServer {
           order,
           family,
           genus,
+          recordedBy,
         } = req.body;
 
         if (!uri) {
@@ -441,8 +468,18 @@ export class AppViewServer {
         // Reverse geocode to get administrative geography fields
         const geocoded = await this.geocoding.reverseGeocode(latitude, longitude);
 
+        // Parse co-observers
+        const coObservers: string[] = [];
+        if (recordedBy && Array.isArray(recordedBy)) {
+          for (const did of recordedBy) {
+            if (typeof did === "string" && did !== sessionDid) {
+              coObservers.push(did);
+            }
+          }
+        }
+
         // Build the updated record
-        const record = {
+        const record: Record<string, unknown> = {
           $type: "org.rwell.test.occurrence",
           scientificName: scientificName || undefined,
           eventDate: eventDate || new Date().toISOString(),
@@ -476,6 +513,11 @@ export class AppViewServer {
           createdAt: new Date().toISOString(),
         };
 
+        // Add co-observers if any
+        if (coObservers.length > 0) {
+          record["recordedBy"] = coObservers;
+        }
+
         // Update the record on the user's PDS using putRecord
         const result = await agent.com.atproto.repo.putRecord({
           repo: sessionDid,
@@ -494,6 +536,9 @@ export class AppViewServer {
           "open", // Default geoprivacy for now
         );
 
+        // Sync observers table
+        await this.db.syncOccurrenceObservers(result.data.uri, sessionDid, coObservers);
+
         res.json({
           success: true,
           uri: result.data.uri,
@@ -502,6 +547,140 @@ export class AppViewServer {
         });
       } catch (error) {
         logger.error({ err: error }, "Error updating occurrence");
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    // Add co-observer to an occurrence
+    this.app.post("/api/occurrences/:uri(*)/observers", async (req, res) => {
+      try {
+        const occurrenceUri = req.params["uri"];
+        const { did: coObserverDid } = req.body;
+
+        if (!occurrenceUri || !coObserverDid) {
+          res.status(400).json({ error: "uri and did are required" });
+          return;
+        }
+
+        // Require authentication
+        const sessionDid = req.cookies?.session_did;
+        if (!sessionDid) {
+          res.status(401).json({ error: "Authentication required" });
+          return;
+        }
+
+        // Verify user is the owner of the occurrence
+        const occurrence = await this.db.getOccurrence(occurrenceUri);
+        if (!occurrence) {
+          res.status(404).json({ error: "Occurrence not found" });
+          return;
+        }
+
+        if (occurrence.did !== sessionDid) {
+          res.status(403).json({ error: "Only the owner can add co-observers" });
+          return;
+        }
+
+        // Cannot add self as co-observer
+        if (coObserverDid === sessionDid) {
+          res.status(400).json({ error: "Cannot add yourself as a co-observer" });
+          return;
+        }
+
+        // Add co-observer
+        await this.db.addOccurrenceObserver(occurrenceUri, coObserverDid, "co-observer");
+
+        // Also ensure owner is in the table
+        await this.db.addOccurrenceObserver(occurrenceUri, sessionDid, "owner");
+
+        logger.info({ occurrenceUri, coObserverDid }, "Added co-observer");
+
+        res.json({ success: true });
+      } catch (error) {
+        logger.error({ err: error }, "Error adding co-observer");
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    // Remove co-observer from an occurrence
+    this.app.delete("/api/occurrences/:uri(*)/observers/:did(*)", async (req, res) => {
+      try {
+        const occurrenceUri = req.params["uri"];
+        const coObserverDid = req.params["did"];
+
+        if (!occurrenceUri || !coObserverDid) {
+          res.status(400).json({ error: "uri and did are required" });
+          return;
+        }
+
+        // Require authentication
+        const sessionDid = req.cookies?.session_did;
+        if (!sessionDid) {
+          res.status(401).json({ error: "Authentication required" });
+          return;
+        }
+
+        // Verify user is the owner of the occurrence
+        const occurrence = await this.db.getOccurrence(occurrenceUri);
+        if (!occurrence) {
+          res.status(404).json({ error: "Occurrence not found" });
+          return;
+        }
+
+        if (occurrence.did !== sessionDid) {
+          res.status(403).json({ error: "Only the owner can remove co-observers" });
+          return;
+        }
+
+        // Remove co-observer (this won't remove the owner)
+        await this.db.removeOccurrenceObserver(occurrenceUri, coObserverDid);
+
+        logger.info({ occurrenceUri, coObserverDid }, "Removed co-observer");
+
+        res.json({ success: true });
+      } catch (error) {
+        logger.error({ err: error }, "Error removing co-observer");
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    // Get observers for an occurrence
+    this.app.get("/api/occurrences/:uri(*)/observers", async (req, res) => {
+      try {
+        const occurrenceUri = req.params["uri"];
+        if (!occurrenceUri) {
+          res.status(400).json({ error: "uri is required" });
+          return;
+        }
+
+        const occurrence = await this.db.getOccurrence(occurrenceUri);
+        if (!occurrence) {
+          res.status(404).json({ error: "Occurrence not found" });
+          return;
+        }
+
+        const observerData = await this.db.getOccurrenceObservers(occurrenceUri);
+
+        // Enrich with profile info
+        const resolver = getIdentityResolver();
+        const dids = observerData.map((o) => o.did);
+        const profiles = await resolver.getProfiles(dids);
+
+        const observers = observerData.map((o) => {
+          const profile = profiles.get(o.did);
+          return {
+            did: o.did,
+            handle: profile?.handle,
+            displayName: profile?.displayName,
+            avatar: profile?.avatar,
+            role: o.role,
+            addedAt: o.addedAt.toISOString(),
+          };
+        });
+
+        res.json({ observers });
+      } catch (error) {
+        logger.error({ err: error }, "Error fetching observers");
         res.status(500).json({ error: "Internal server error" });
       }
     });
@@ -1217,14 +1396,52 @@ export class AppViewServer {
   ): Promise<OccurrenceResponse[]> {
     if (rows.length === 0) return [];
 
-    // Fetch profiles for all observers
-    const dids = [...new Set(rows.map((r) => r.did))];
+    // Fetch all observers for all occurrences
+    const observersByUri = new Map<string, Array<{ did: string; role: "owner" | "co-observer"; addedAt: Date }>>();
+    await Promise.all(
+      rows.map(async (row) => {
+        const observers = await this.db.getOccurrenceObservers(row.uri);
+        observersByUri.set(row.uri, observers);
+      }),
+    );
+
+    // Collect all unique DIDs (owners and co-observers)
+    const allDids = new Set<string>();
+    rows.forEach((r) => allDids.add(r.did));
+    observersByUri.forEach((observers) => {
+      observers.forEach((o) => allDids.add(o.did));
+    });
+
     const resolver = getIdentityResolver();
-    const profiles = await resolver.getProfiles(dids);
+    const profiles = await resolver.getProfiles([...allDids]);
 
     return Promise.all(
       rows.map(async (row) => {
         const profile = profiles.get(row.did);
+        const observerData = observersByUri.get(row.uri) || [];
+
+        // Build observers array with profile info
+        const observers: ObserverInfo[] = observerData.map((o) => {
+          const p = profiles.get(o.did);
+          return {
+            did: o.did,
+            handle: p?.handle,
+            displayName: p?.displayName,
+            avatar: p?.avatar,
+            role: o.role,
+          };
+        });
+
+        // If no observers in table yet, add owner from occurrence
+        if (observers.length === 0) {
+          observers.push({
+            did: row.did,
+            handle: profile?.handle,
+            displayName: profile?.displayName,
+            avatar: profile?.avatar,
+            role: "owner",
+          });
+        }
 
         // Get all subjects for this occurrence
         const subjectData = await this.db.getSubjectsForOccurrence(row.uri);
@@ -1265,6 +1482,7 @@ export class AppViewServer {
             displayName: profile?.displayName,
             avatar: profile?.avatar,
           },
+          observers,
           // Darwin Core fields
           scientificName: row.scientific_name || undefined,
           communityId: communityId || undefined,

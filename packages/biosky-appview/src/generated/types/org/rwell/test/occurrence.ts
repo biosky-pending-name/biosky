@@ -63,6 +63,8 @@ export interface Main {
   family?: string
   /** Taxonomic genus (Darwin Core dwc:genus). */
   genus?: string
+  /** DIDs of co-observers who participated in this observation. The record creator is the primary observer. */
+  recordedBy?: string[]
   [k: string]: unknown
 }
 

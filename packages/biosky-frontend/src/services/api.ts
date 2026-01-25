@@ -186,6 +186,8 @@ export async function submitOccurrence(data: {
   order?: string;
   family?: string;
   genus?: string;
+  // Co-observers
+  recordedBy?: string[];
 }): Promise<{ uri: string; cid: string }> {
   const response = await fetch(`${API_BASE}/api/occurrences`, {
     method: "POST",
@@ -222,6 +224,8 @@ export async function updateOccurrence(data: {
   order?: string;
   family?: string;
   genus?: string;
+  // Co-observers
+  recordedBy?: string[];
 }): Promise<{ uri: string; cid: string }> {
   const response = await fetch(`${API_BASE}/api/occurrences`, {
     method: "PUT",

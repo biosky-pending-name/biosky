@@ -274,6 +274,50 @@ impl Database {
         .bind(genus)
         .execute(&self.pool)
         .await?;
+
+        // Sync occurrence_observers table
+        // First, delete existing observers for this occurrence
+        sqlx::query("DELETE FROM occurrence_observers WHERE occurrence_uri = $1")
+            .bind(&event.uri)
+            .execute(&self.pool)
+            .await?;
+
+        // Insert owner
+        sqlx::query(
+            r#"
+            INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
+            VALUES ($1, $2, 'owner')
+            ON CONFLICT (occurrence_uri, observer_did) DO NOTHING
+            "#,
+        )
+        .bind(&event.uri)
+        .bind(&event.did)
+        .execute(&self.pool)
+        .await?;
+
+        // Extract and insert co-observers from recordedBy array
+        if let Some(recorded_by) = record.and_then(|r| r.get("recordedBy")).and_then(|v| v.as_array())
+        {
+            for did_value in recorded_by {
+                if let Some(co_observer_did) = did_value.as_str() {
+                    // Don't add owner as co-observer
+                    if co_observer_did != event.did {
+                        sqlx::query(
+                            r#"
+                            INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
+                            VALUES ($1, $2, 'co-observer')
+                            ON CONFLICT (occurrence_uri, observer_did) DO NOTHING
+                            "#,
+                        )
+                        .bind(&event.uri)
+                        .bind(co_observer_did)
+                        .execute(&self.pool)
+                        .await?;
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 

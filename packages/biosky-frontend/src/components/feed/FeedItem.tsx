@@ -4,12 +4,14 @@ import { useSelector } from "react-redux";
 import {
   Box,
   Avatar,
+  AvatarGroup,
   Typography,
   IconButton,
   Menu,
   MenuItem,
   CardMedia,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Occurrence } from "../../services/types";
@@ -43,12 +45,18 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const isOwnPost = currentUser?.did === occurrence.observer.did;
 
+  // Get owner and co-observers
+  const observers = occurrence.observers || [];
+  const owner = observers.find((o) => o.role === "owner") || occurrence.observer;
+  const coObservers = observers.filter((o) => o.role === "co-observer");
+  const hasCoObservers = coObservers.length > 0;
+
   const displayName =
-    occurrence.observer.displayName ||
-    occurrence.observer.handle ||
-    occurrence.observer.did.slice(0, 20);
-  const handle = occurrence.observer.handle
-    ? `@${occurrence.observer.handle}`
+    owner.displayName ||
+    owner.handle ||
+    owner.did.slice(0, 20);
+  const handle = owner.handle
+    ? `@${owner.handle}`
     : "";
   const timeAgo = formatTimeAgo(new Date(occurrence.createdAt));
   const species =
@@ -59,6 +67,11 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
 
   const occurrenceUrl = `/occurrence/${encodeURIComponent(occurrence.uri)}`;
   const pdslsUrl = getPdslsUrl(occurrence.uri);
+
+  // Build tooltip for co-observers
+  const coObserverNames = coObservers
+    .map((o) => o.displayName || o.handle || o.did.slice(0, 15))
+    .join(", ");
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -92,17 +105,37 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
         "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
       }}
     >
-      <Avatar
-        src={occurrence.observer.avatar}
-        alt={displayName}
-        sx={{ width: 48, height: 48 }}
-      />
+      {hasCoObservers ? (
+        <Tooltip title={`With ${coObserverNames}`} placement="top">
+          <AvatarGroup
+            max={3}
+            sx={{
+              "& .MuiAvatar-root": { width: 40, height: 40, border: "2px solid", borderColor: "background.paper" },
+            }}
+          >
+            <Avatar src={owner.avatar} alt={displayName} />
+            {coObservers.slice(0, 2).map((co) => (
+              <Avatar
+                key={co.did}
+                src={co.avatar}
+                alt={co.displayName || co.handle || co.did}
+              />
+            ))}
+          </AvatarGroup>
+        </Tooltip>
+      ) : (
+        <Avatar
+          src={owner.avatar}
+          alt={displayName}
+          sx={{ width: 48, height: 48 }}
+        />
+      )}
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Stack direction="row" alignItems="baseline" spacing={1} flexWrap="wrap">
           <Typography
             component={Link}
-            to={`/profile/${encodeURIComponent(occurrence.observer.did)}`}
+            to={`/profile/${encodeURIComponent(owner.did)}`}
             onClick={(e) => e.stopPropagation()}
             sx={{
               fontWeight: 600,
@@ -113,6 +146,21 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
           >
             {displayName}
           </Typography>
+          {hasCoObservers && (
+            <Tooltip title={`With ${coObserverNames}`}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "primary.main",
+                  cursor: "pointer",
+                  "&:hover": { textDecoration: "underline" },
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                +{coObservers.length} other{coObservers.length > 1 ? "s" : ""}
+              </Typography>
+            </Tooltip>
+          )}
           {handle && (
             <Typography variant="body2" color="text.disabled">
               {handle}

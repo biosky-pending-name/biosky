@@ -4,6 +4,14 @@ export interface Subject {
   identificationCount: number;
 }
 
+export interface Observer {
+  did: string;
+  handle?: string;
+  displayName?: string;
+  avatar?: string;
+  role: "owner" | "co-observer";
+}
+
 export interface Occurrence {
   uri: string;
   cid: string;
@@ -13,6 +21,7 @@ export interface Occurrence {
     displayName?: string;
     avatar?: string;
   };
+  observers: Observer[];
   scientificName?: string;
   communityId?: string; // Backward compat: refers to subject 0
   subjects: Subject[]; // All subjects with their community IDs

@@ -265,6 +265,18 @@ export class Database {
         reason TEXT,
         source TEXT
       );
+
+      -- Occurrence observers (for multi-user observations)
+      CREATE TABLE IF NOT EXISTS occurrence_observers (
+        occurrence_uri TEXT NOT NULL REFERENCES occurrences(uri) ON DELETE CASCADE,
+        observer_did TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'co-observer' CHECK (role IN ('owner', 'co-observer')),
+        added_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (occurrence_uri, observer_did)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_occurrence_observers_did
+        ON occurrence_observers(observer_did);
     `);
 
     console.log("Database migrations completed");
@@ -406,6 +418,101 @@ export class Database {
 
   async deleteOccurrence(uri: string): Promise<void> {
     await this.pool.query("DELETE FROM occurrences WHERE uri = $1", [uri]);
+  }
+
+  // Occurrence observer methods (multi-user observations)
+
+  async syncOccurrenceObservers(
+    occurrenceUri: string,
+    ownerDid: string,
+    coObserverDids: string[],
+  ): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Delete existing observers for this occurrence
+      await client.query(
+        "DELETE FROM occurrence_observers WHERE occurrence_uri = $1",
+        [occurrenceUri],
+      );
+
+      // Insert owner
+      await client.query(
+        `INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
+         VALUES ($1, $2, 'owner')`,
+        [occurrenceUri, ownerDid],
+      );
+
+      // Insert co-observers
+      for (const did of coObserverDids) {
+        if (did !== ownerDid) {
+          await client.query(
+            `INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
+             VALUES ($1, $2, 'co-observer')
+             ON CONFLICT (occurrence_uri, observer_did) DO NOTHING`,
+            [occurrenceUri, did],
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async addOccurrenceObserver(
+    occurrenceUri: string,
+    observerDid: string,
+    role: "owner" | "co-observer" = "co-observer",
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (occurrence_uri, observer_did) DO UPDATE SET role = $3`,
+      [occurrenceUri, observerDid, role],
+    );
+  }
+
+  async removeOccurrenceObserver(
+    occurrenceUri: string,
+    observerDid: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `DELETE FROM occurrence_observers
+       WHERE occurrence_uri = $1 AND observer_did = $2 AND role = 'co-observer'`,
+      [occurrenceUri, observerDid],
+    );
+  }
+
+  async getOccurrenceObservers(
+    occurrenceUri: string,
+  ): Promise<Array<{ did: string; role: "owner" | "co-observer"; addedAt: Date }>> {
+    const result = await this.pool.query(
+      `SELECT observer_did as did, role, added_at
+       FROM occurrence_observers
+       WHERE occurrence_uri = $1
+       ORDER BY role ASC, added_at ASC`,
+      [occurrenceUri],
+    );
+    return result.rows.map((row: { did: string; role: string; added_at: Date }) => ({
+      did: row.did,
+      role: row.role as "owner" | "co-observer",
+      addedAt: row.added_at,
+    }));
+  }
+
+  async isOccurrenceOwner(occurrenceUri: string, did: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1 FROM occurrence_observers
+       WHERE occurrence_uri = $1 AND observer_did = $2 AND role = 'owner'`,
+      [occurrenceUri, did],
+    );
+    return result.rows.length > 0;
   }
 
   async upsertIdentification(event: IdentificationEvent): Promise<void> {
@@ -634,51 +741,62 @@ export class Database {
       type?: "observations" | "identifications" | "all";
     },
   ): Promise<{
-    occurrences: OccurrenceRow[];
+    occurrences: (OccurrenceRow & { observer_role?: string })[];
     identifications: IdentificationRow[];
     counts: { observations: number; identifications: number; species: number };
   }> {
     const limit = options.limit || 20;
     const type = options.type || "all";
 
-    // Get counts
+    // Get counts (includes co-observed occurrences)
     const countsResult = await this.pool.query(
       `SELECT
-        (SELECT COUNT(*) FROM occurrences WHERE did = $1) as observation_count,
+        (SELECT COUNT(DISTINCT o.uri) FROM occurrences o
+         LEFT JOIN occurrence_observers oo ON o.uri = oo.occurrence_uri
+         WHERE o.did = $1 OR oo.observer_did = $1) as observation_count,
         (SELECT COUNT(*) FROM identifications WHERE did = $1) as identification_count,
-        (SELECT COUNT(DISTINCT scientific_name) FROM occurrences WHERE did = $1 AND scientific_name IS NOT NULL) as species_count`,
+        (SELECT COUNT(DISTINCT o.scientific_name) FROM occurrences o
+         LEFT JOIN occurrence_observers oo ON o.uri = oo.occurrence_uri
+         WHERE (o.did = $1 OR oo.observer_did = $1) AND o.scientific_name IS NOT NULL) as species_count`,
       [did],
     );
 
-    let occurrences: OccurrenceRow[] = [];
+    let occurrences: (OccurrenceRow & { observer_role?: string })[] = [];
     let identifications: IdentificationRow[] = [];
 
     if (type === "observations" || type === "all") {
       const occParams: (string | number)[] = [did, limit];
       let occCursor = "";
       if (options.cursor) {
-        occCursor = "AND created_at < $3";
+        occCursor = "AND o.created_at < $3";
         occParams.push(options.cursor);
       }
 
+      // Include occurrences where user is owner OR co-observer
       const occResult = await this.pool.query(
-        `SELECT
-          uri, cid, did, scientific_name, event_date,
-          ST_Y(location::geometry) as latitude,
-          ST_X(location::geometry) as longitude,
-          coordinate_uncertainty_meters,
-          continent, country, country_code, state_province, county, municipality, locality, water_body,
-          verbatim_locality, occurrence_remarks,
-          associated_media, recorded_by,
-          taxon_id, taxon_rank, vernacular_name, kingdom, phylum, class, "order", family, genus,
-          created_at
-        FROM occurrences
-        WHERE did = $1 ${occCursor}
-        ORDER BY created_at DESC
+        `SELECT DISTINCT ON (o.uri)
+          o.uri, o.cid, o.did, o.scientific_name, o.event_date,
+          ST_Y(o.location::geometry) as latitude,
+          ST_X(o.location::geometry) as longitude,
+          o.coordinate_uncertainty_meters,
+          o.continent, o.country, o.country_code, o.state_province, o.county, o.municipality, o.locality, o.water_body,
+          o.verbatim_locality, o.occurrence_remarks,
+          o.associated_media, o.recorded_by,
+          o.taxon_id, o.taxon_rank, o.vernacular_name, o.kingdom, o.phylum, o.class, o."order", o.family, o.genus,
+          o.created_at,
+          COALESCE(oo.role, CASE WHEN o.did = $1 THEN 'owner' ELSE 'co-observer' END) as observer_role
+        FROM occurrences o
+        LEFT JOIN occurrence_observers oo ON o.uri = oo.occurrence_uri AND oo.observer_did = $1
+        WHERE o.did = $1 OR oo.observer_did = $1 ${occCursor}
+        ORDER BY o.uri, o.created_at DESC
         LIMIT $2`,
         occParams,
       );
-      occurrences = occResult.rows;
+      // Re-sort by created_at since DISTINCT ON requires ordering by uri first
+      occurrences = occResult.rows.sort(
+        (a: OccurrenceRow, b: OccurrenceRow) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     }
 
     if (type === "identifications" || type === "all") {
