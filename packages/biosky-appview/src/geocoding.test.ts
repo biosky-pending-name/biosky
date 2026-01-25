@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GeocodingService } from "./geocoding.js";
+import { GeocodingService } from "biosky-shared";
 
 describe("GeocodingService", () => {
   let service: GeocodingService;

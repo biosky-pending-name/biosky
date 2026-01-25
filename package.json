@@ -9,13 +9,14 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w biosky-appview -w biosky-frontend",
+    "build": "npm run build -w biosky-shared -w biosky-appview -w biosky-api -w biosky-frontend",
     "dev": "npm run dev --workspace=biosky-appview",
     "generate-types": "node scripts/generate-types.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "appview": "npm run start --workspace=biosky-appview",
+    "api": "npm run start --workspace=biosky-api",
     "frontend:dev": "npm run dev --workspace=biosky-frontend",
     "frontend:build": "npm run build --workspace=biosky-frontend"
   },

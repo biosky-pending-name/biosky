@@ -20,6 +20,20 @@ processes:
       cloud-sql-proxy:
         condition: process_healthy
 
+  api:
+    command: npm run api
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:${DB_PASSWORD}@localhost:5432/biosky}
+      - PORT=3002
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 3002
+        path: /health
+    depends_on:
+      cloud-sql-proxy:
+        condition: process_healthy
+
   frontend:
     command: npm run frontend:dev
     depends_on:

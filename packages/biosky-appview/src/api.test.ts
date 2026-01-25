@@ -47,8 +47,8 @@ const createMockCommunityIdCalculator = () => ({
 let mockCommunityIdCalculator: ReturnType<typeof createMockCommunityIdCalculator>;
 
 // Mock the dependencies before importing AppViewServer
-vi.mock("./database/index.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./database/index.js")>();
+vi.mock("biosky-shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("biosky-shared")>();
 
   // Create a class-like mock for Database
   const MockDatabase = function (this: ReturnType<typeof createMockDatabase>) {
@@ -56,9 +56,22 @@ vi.mock("./database/index.js", async (importOriginal) => {
     Object.assign(this, mockDatabase);
   } as unknown as new () => ReturnType<typeof createMockDatabase>;
 
+  // Mock CommunityIdCalculator
+  const MockCommunityIdCalculator = function (this: object) {
+    mockCommunityIdCalculator = createMockCommunityIdCalculator();
+    Object.assign(this, mockCommunityIdCalculator);
+  };
+
   return {
     ...actual,
     Database: MockDatabase,
+    CommunityIdCalculator: MockCommunityIdCalculator,
+    getIdentityResolver: vi.fn().mockImplementation(() => {
+      if (!mockIdentityResolver) {
+        mockIdentityResolver = createMockIdentityResolver();
+      }
+      return mockIdentityResolver;
+    }),
   };
 });
 
@@ -73,25 +86,10 @@ vi.mock("./auth/index.js", async (importOriginal) => {
 
   return {
     ...actual,
-    getIdentityResolver: vi.fn().mockImplementation(() => {
-      if (!mockIdentityResolver) {
-        mockIdentityResolver = createMockIdentityResolver();
-      }
-      return mockIdentityResolver;
-    }),
     OAuthService: MockOAuthService,
     DatabaseStateStore: vi.fn(),
     DatabaseSessionStore: vi.fn(),
   };
-});
-
-// Mock CommunityIdCalculator
-vi.mock("./community-id.js", () => {
-  const MockCommunityIdCalculator = function (this: object) {
-    mockCommunityIdCalculator = createMockCommunityIdCalculator();
-    Object.assign(this, mockCommunityIdCalculator);
-  };
-  return { CommunityIdCalculator: MockCommunityIdCalculator };
 });
 
 // Import after mocks are set up

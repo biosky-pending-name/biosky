@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { TaxonomyResolver } from './taxonomy.js'
+import { TaxonomyResolver } from 'biosky-shared'
 
 describe('TaxonomyResolver', () => {
   let resolver: TaxonomyResolver

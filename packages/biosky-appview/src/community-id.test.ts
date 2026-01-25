@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { CommunityIdCalculator, TaxonomicHierarchy } from './community-id.js'
-import type { Database, IdentificationRow } from './database/index.js'
+import { CommunityIdCalculator, TaxonomicHierarchy, type Database, type IdentificationRow } from 'biosky-shared'
 
 // ============================================================================
 // TaxonomicHierarchy Tests

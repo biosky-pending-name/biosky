@@ -35,13 +35,16 @@ import {
   type OccurrenceRow,
   type IdentificationRow,
   type CommentRow,
-} from "./database/index.js";
-import {
   getIdentityResolver,
+  type Profile,
+  TaxonomyResolver,
+  CommunityIdCalculator,
+  GeocodingService,
+} from "biosky-shared";
+import {
   OAuthService,
   DatabaseStateStore,
   DatabaseSessionStore,
-  type Profile,
 } from "./auth/index.js";
 
 // Utility to build DATABASE_URL from environment variables
@@ -57,9 +60,6 @@ function getDatabaseUrl(): string {
   // Otherwise use DATABASE_URL directly (local dev)
   return process.env["DATABASE_URL"] || "postgresql://localhost:5432/biosky";
 }
-import { TaxonomyResolver } from "./taxonomy.js";
-import { CommunityIdCalculator } from "./community-id.js";
-import { GeocodingService } from "./geocoding.js";
 
 interface AppViewConfig {
   port: number;
