@@ -102,7 +102,10 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = IngesterConfig::default();
-        assert_eq!(config.relay_url, "wss://jetstream2.us-east.bsky.network/subscribe");
+        assert_eq!(
+            config.relay_url,
+            "wss://jetstream2.us-east.bsky.network/subscribe"
+        );
         assert_eq!(config.port, 8080);
         assert!(config.cursor.is_none());
         assert!(config.database_url.is_empty());

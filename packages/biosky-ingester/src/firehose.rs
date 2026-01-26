@@ -101,7 +101,10 @@ impl FirehoseSubscription {
                 }
                 Err(e) => {
                     error!("Jetstream error: {}", e);
-                    let _ = self.event_tx.send(FirehoseEvent::Error(e.to_string())).await;
+                    let _ = self
+                        .event_tx
+                        .send(FirehoseEvent::Error(e.to_string()))
+                        .await;
 
                     reconnect_attempts += 1;
                     if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS {
@@ -179,14 +182,20 @@ impl FirehoseSubscription {
         let event: JetstreamEvent = serde_json::from_str(text)
             .map_err(|e| IngesterError::CborDecode(format!("JSON parse error: {}", e)))?;
 
-        let time = Utc.timestamp_micros(event.time_us).single().unwrap_or_else(Utc::now);
+        let time = Utc
+            .timestamp_micros(event.time_us)
+            .single()
+            .unwrap_or_else(Utc::now);
         let seq = event.time_us; // Jetstream uses time_us as cursor
 
         // Update timing info periodically
         self.last_timing = Some(CommitTimingInfo { seq, time });
         if self.last_timing_sent.elapsed() >= TIMING_UPDATE_INTERVAL {
             if let Some(ref timing) = self.last_timing {
-                let _ = self.event_tx.send(FirehoseEvent::Commit(timing.clone())).await;
+                let _ = self
+                    .event_tx
+                    .send(FirehoseEvent::Commit(timing.clone()))
+                    .await;
             }
             self.last_timing_sent = Instant::now();
         }
@@ -210,7 +219,10 @@ impl FirehoseSubscription {
                     record: commit.record,
                 };
                 debug!("[Occurrence] {}: {}", occ_event.action, occ_event.uri);
-                let _ = self.event_tx.send(FirehoseEvent::Occurrence(occ_event)).await;
+                let _ = self
+                    .event_tx
+                    .send(FirehoseEvent::Occurrence(occ_event))
+                    .await;
             } else if collection == IDENTIFICATION_COLLECTION {
                 let id_event = IdentificationEvent {
                     did: did.to_string(),
@@ -222,7 +234,10 @@ impl FirehoseSubscription {
                     record: commit.record,
                 };
                 debug!("[Identification] {}: {}", id_event.action, id_event.uri);
-                let _ = self.event_tx.send(FirehoseEvent::Identification(id_event)).await;
+                let _ = self
+                    .event_tx
+                    .send(FirehoseEvent::Identification(id_event))
+                    .await;
             } else if collection == COMMENT_COLLECTION {
                 let comment_event = CommentEvent {
                     did: did.to_string(),
@@ -234,7 +249,10 @@ impl FirehoseSubscription {
                     record: commit.record,
                 };
                 debug!("[Comment] {}: {}", comment_event.action, comment_event.uri);
-                let _ = self.event_tx.send(FirehoseEvent::Comment(comment_event)).await;
+                let _ = self
+                    .event_tx
+                    .send(FirehoseEvent::Comment(comment_event))
+                    .await;
             }
         }
 

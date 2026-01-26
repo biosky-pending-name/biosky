@@ -24,11 +24,13 @@ use tracing_subscriber::{prelude::*, EnvFilter};
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    let env_filter =
-        EnvFilter::from_default_env().add_directive("biosky_ingester=info".parse()?);
+    let env_filter = EnvFilter::from_default_env().add_directive("biosky_ingester=info".parse()?);
 
     // Use JSON format for GCP Cloud Logging when LOG_FORMAT=json
-    if std::env::var("LOG_FORMAT").map(|v| v == "json").unwrap_or(false) {
+    if std::env::var("LOG_FORMAT")
+        .map(|v| v == "json")
+        .unwrap_or(false)
+    {
         tracing_subscriber::registry()
             .with(env_filter)
             .with(tracing_stackdriver::layer())
@@ -206,8 +208,11 @@ fn load_config() -> Result<IngesterConfig> {
         url
     } else {
         // Build URL from separate components (Cloud SQL style)
-        let host = std::env::var("DB_HOST")
-            .map_err(|_| IngesterError::Config("DATABASE_URL or DB_HOST environment variable is required".to_string()))?;
+        let host = std::env::var("DB_HOST").map_err(|_| {
+            IngesterError::Config(
+                "DATABASE_URL or DB_HOST environment variable is required".to_string(),
+            )
+        })?;
         let name = std::env::var("DB_NAME").unwrap_or_else(|_| "biosky".to_string());
         let user = std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string());
         let password = std::env::var("DB_PASSWORD").unwrap_or_default();
@@ -229,8 +234,8 @@ fn load_config() -> Result<IngesterConfig> {
         }
     };
 
-    let relay_url =
-        std::env::var("JETSTREAM_URL").unwrap_or_else(|_| "wss://jetstream2.us-east.bsky.network/subscribe".to_string());
+    let relay_url = std::env::var("JETSTREAM_URL")
+        .unwrap_or_else(|_| "wss://jetstream2.us-east.bsky.network/subscribe".to_string());
 
     let cursor = std::env::var("CURSOR")
         .ok()

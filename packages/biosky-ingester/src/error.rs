@@ -103,7 +103,10 @@ mod tests {
     #[test]
     fn test_config_error_display() {
         let err = IngesterError::Config("missing DATABASE_URL".to_string());
-        assert_eq!(format!("{}", err), "Configuration error: missing DATABASE_URL");
+        assert_eq!(
+            format!("{}", err),
+            "Configuration error: missing DATABASE_URL"
+        );
     }
 
     #[test]

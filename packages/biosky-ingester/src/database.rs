@@ -121,9 +121,7 @@ impl Database {
         let verbatim_locality = record
             .and_then(|r| r.get("verbatimLocality"))
             .and_then(|v| v.as_str());
-        let notes = record
-            .and_then(|r| r.get("notes"))
-            .and_then(|v| v.as_str());
+        let notes = record.and_then(|r| r.get("notes")).and_then(|v| v.as_str());
         let associated_media = record.and_then(|r| r.get("associatedMedia"));
 
         // Extract taxonomy fields
@@ -142,18 +140,12 @@ impl Database {
         let phylum = record
             .and_then(|r| r.get("phylum"))
             .and_then(|v| v.as_str());
-        let class = record
-            .and_then(|r| r.get("class"))
-            .and_then(|v| v.as_str());
-        let order = record
-            .and_then(|r| r.get("order"))
-            .and_then(|v| v.as_str());
+        let class = record.and_then(|r| r.get("class")).and_then(|v| v.as_str());
+        let order = record.and_then(|r| r.get("order")).and_then(|v| v.as_str());
         let family = record
             .and_then(|r| r.get("family"))
             .and_then(|v| v.as_str());
-        let genus = record
-            .and_then(|r| r.get("genus"))
-            .and_then(|v| v.as_str());
+        let genus = record.and_then(|r| r.get("genus")).and_then(|v| v.as_str());
 
         // Extract location
         let location = record.and_then(|r| r.get("location"));
@@ -200,7 +192,10 @@ impl Database {
         let (lat, lng) = match (lat, lng) {
             (Some(lat), Some(lng)) => (lat, lng),
             _ => {
-                debug!("Skipping occurrence without valid coordinates: {}", event.uri);
+                debug!(
+                    "Skipping occurrence without valid coordinates: {}",
+                    event.uri
+                );
                 return Ok(());
             }
         };
@@ -211,9 +206,7 @@ impl Database {
                 return Ok(());
             }
         };
-        let created_at = created_at
-            .and_then(parse_datetime)
-            .unwrap_or(event_date);
+        let created_at = created_at.and_then(parse_datetime).unwrap_or(event_date);
 
         sqlx::query!(
             r#"
@@ -294,9 +287,12 @@ impl Database {
 
         // Sync occurrence_observers table
         // First, delete existing observers for this occurrence
-        sqlx::query!("DELETE FROM occurrence_observers WHERE occurrence_uri = $1", &event.uri)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM occurrence_observers WHERE occurrence_uri = $1",
+            &event.uri
+        )
+        .execute(&self.pool)
+        .await?;
 
         // Insert owner
         sqlx::query!(
@@ -312,7 +308,9 @@ impl Database {
         .await?;
 
         // Extract and insert co-observers from recordedBy array
-        if let Some(recorded_by) = record.and_then(|r| r.get("recordedBy")).and_then(|v| v.as_array())
+        if let Some(recorded_by) = record
+            .and_then(|r| r.get("recordedBy"))
+            .and_then(|v| v.as_array())
         {
             for did_value in recorded_by {
                 if let Some(co_observer_did) = did_value.as_str() {
@@ -353,12 +351,8 @@ impl Database {
         // Extract fields from record JSON to match existing schema
         let record = event.record.as_ref();
         let subject = record.and_then(|r| r.get("subject"));
-        let subject_uri = subject
-            .and_then(|s| s.get("uri"))
-            .and_then(|v| v.as_str());
-        let subject_cid = subject
-            .and_then(|s| s.get("cid"))
-            .and_then(|v| v.as_str());
+        let subject_uri = subject.and_then(|s| s.get("uri")).and_then(|v| v.as_str());
+        let subject_cid = subject.and_then(|s| s.get("cid")).and_then(|v| v.as_str());
         let subject_index = record
             .and_then(|r| r.get("subjectIndex"))
             .and_then(|v| v.as_i64())
@@ -452,22 +446,12 @@ impl Database {
         // Extract fields from record JSON
         let record = event.record.as_ref();
         let subject = record.and_then(|r| r.get("subject"));
-        let subject_uri = subject
-            .and_then(|s| s.get("uri"))
-            .and_then(|v| v.as_str());
-        let subject_cid = subject
-            .and_then(|s| s.get("cid"))
-            .and_then(|v| v.as_str());
-        let body = record
-            .and_then(|r| r.get("body"))
-            .and_then(|v| v.as_str());
+        let subject_uri = subject.and_then(|s| s.get("uri")).and_then(|v| v.as_str());
+        let subject_cid = subject.and_then(|s| s.get("cid")).and_then(|v| v.as_str());
+        let body = record.and_then(|r| r.get("body")).and_then(|v| v.as_str());
         let reply_to = record.and_then(|r| r.get("replyTo"));
-        let reply_to_uri = reply_to
-            .and_then(|s| s.get("uri"))
-            .and_then(|v| v.as_str());
-        let reply_to_cid = reply_to
-            .and_then(|s| s.get("cid"))
-            .and_then(|v| v.as_str());
+        let reply_to_uri = reply_to.and_then(|s| s.get("uri")).and_then(|v| v.as_str());
+        let reply_to_cid = reply_to.and_then(|s| s.get("cid")).and_then(|v| v.as_str());
         let created_at = record
             .and_then(|r| r.get("createdAt"))
             .and_then(|v| v.as_str());

@@ -115,10 +115,13 @@ async fn stats(State(state): State<SharedState>) -> Json<StatsResponse> {
         uptime,
         stats: state.stats.clone(),
         recent_events: state.recent_events.clone(),
-        last_processed: state.last_processed.as_ref().map(|lp| LastProcessedResponse {
-            seq: lp.seq,
-            time: lp.time.to_rfc3339(),
-        }),
+        last_processed: state
+            .last_processed
+            .as_ref()
+            .map(|lp| LastProcessedResponse {
+                seq: lp.seq,
+                time: lp.time.to_rfc3339(),
+            }),
     })
 }
 
@@ -309,7 +312,12 @@ mod tests {
         let router = create_router(state);
 
         let response = router
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
@@ -336,7 +344,12 @@ mod tests {
         let router = create_router(state);
 
         let response = router
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 
