@@ -55,11 +55,22 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres
+
+      - name: Check SQLx prepare is up to date
+        working-directory: packages/biosky-ingester
+        run: cargo sqlx prepare --check
+
       - name: Check Rust ingester
         run: cargo check --manifest-path packages/biosky-ingester/Cargo.toml
+        env:
+          SQLX_OFFLINE: true
 
       - name: Run Rust tests
         run: cargo test --manifest-path packages/biosky-ingester/Cargo.toml
+        env:
+          SQLX_OFFLINE: true
 
   deploy:
     runs-on: ubuntu-latest

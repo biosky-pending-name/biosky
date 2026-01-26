@@ -4,8 +4,23 @@
 
 use crate::error::Result;
 use crate::types::{CommentEvent, IdentificationEvent, OccurrenceEvent};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tracing::{debug, info};
+
+/// Parse an ISO 8601 date string into a DateTime<Utc>
+fn parse_datetime(s: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(s)
+        .map(|dt| dt.with_timezone(&Utc))
+        .ok()
+}
+
+/// Parse an ISO 8601 date string into a NaiveDateTime (for timestamp columns without timezone)
+fn parse_naive_datetime(s: &str) -> Option<NaiveDateTime> {
+    DateTime::parse_from_rfc3339(s)
+        .map(|dt| dt.naive_utc())
+        .ok()
+}
 
 /// Database connection and operations
 pub struct Database {
@@ -189,16 +204,18 @@ impl Database {
                 return Ok(());
             }
         };
-        let event_date = match event_date {
+        let event_date = match event_date.and_then(parse_datetime) {
             Some(d) => d,
             None => {
-                debug!("Skipping occurrence without eventDate: {}", event.uri);
+                debug!("Skipping occurrence without valid eventDate: {}", event.uri);
                 return Ok(());
             }
         };
-        let created_at = created_at.unwrap_or(event_date);
+        let created_at = created_at
+            .and_then(parse_datetime)
+            .unwrap_or(event_date);
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO occurrences (
                 uri, did, cid, scientific_name, event_date, location,
@@ -242,56 +259,55 @@ impl Database {
                 family = EXCLUDED.family,
                 genus = EXCLUDED.genus
             "#,
+            &event.uri,
+            &event.did,
+            &event.cid,
+            scientific_name,
+            event_date,
+            lng, // ST_MakePoint takes (x, y) = (lng, lat)
+            lat,
+            coord_uncertainty,
+            continent,
+            country,
+            country_code,
+            state_province,
+            county,
+            municipality,
+            locality,
+            water_body,
+            verbatim_locality,
+            notes,
+            associated_media,
+            created_at,
+            taxon_id,
+            taxon_rank,
+            vernacular_name,
+            kingdom,
+            phylum,
+            class,
+            order,
+            family,
+            genus
         )
-        .bind(&event.uri)
-        .bind(&event.did)
-        .bind(&event.cid)
-        .bind(scientific_name)
-        .bind(event_date)
-        .bind(lng) // ST_MakePoint takes (x, y) = (lng, lat)
-        .bind(lat)
-        .bind(coord_uncertainty)
-        .bind(continent)
-        .bind(country)
-        .bind(country_code)
-        .bind(state_province)
-        .bind(county)
-        .bind(municipality)
-        .bind(locality)
-        .bind(water_body)
-        .bind(verbatim_locality)
-        .bind(notes)
-        .bind(associated_media)
-        .bind(created_at)
-        .bind(taxon_id)
-        .bind(taxon_rank)
-        .bind(vernacular_name)
-        .bind(kingdom)
-        .bind(phylum)
-        .bind(class)
-        .bind(order)
-        .bind(family)
-        .bind(genus)
         .execute(&self.pool)
         .await?;
 
         // Sync occurrence_observers table
         // First, delete existing observers for this occurrence
-        sqlx::query("DELETE FROM occurrence_observers WHERE occurrence_uri = $1")
-            .bind(&event.uri)
+        sqlx::query!("DELETE FROM occurrence_observers WHERE occurrence_uri = $1", &event.uri)
             .execute(&self.pool)
             .await?;
 
         // Insert owner
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
             VALUES ($1, $2, 'owner')
             ON CONFLICT (occurrence_uri, observer_did) DO NOTHING
             "#,
+            &event.uri,
+            &event.did
         )
-        .bind(&event.uri)
-        .bind(&event.did)
         .execute(&self.pool)
         .await?;
 
@@ -302,15 +318,15 @@ impl Database {
                 if let Some(co_observer_did) = did_value.as_str() {
                     // Don't add owner as co-observer
                     if co_observer_did != event.did {
-                        sqlx::query(
+                        sqlx::query!(
                             r#"
                             INSERT INTO occurrence_observers (occurrence_uri, observer_did, role)
                             VALUES ($1, $2, 'co-observer')
                             ON CONFLICT (occurrence_uri, observer_did) DO NOTHING
                             "#,
+                            &event.uri,
+                            co_observer_did
                         )
-                        .bind(&event.uri)
-                        .bind(co_observer_did)
                         .execute(&self.pool)
                         .await?;
                     }
@@ -324,8 +340,7 @@ impl Database {
     /// Delete an occurrence record
     pub async fn delete_occurrence(&self, uri: &str) -> Result<()> {
         debug!("Deleting occurrence: {}", uri);
-        sqlx::query("DELETE FROM occurrences WHERE uri = $1")
-            .bind(uri)
+        sqlx::query!("DELETE FROM occurrences WHERE uri = $1", uri)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -381,16 +396,17 @@ impl Database {
                 return Ok(());
             }
         };
-        let fallback_date = event.time.to_rfc3339();
-        let date_identified = created_at.unwrap_or(&fallback_date);
+        let date_identified = created_at
+            .and_then(parse_naive_datetime)
+            .unwrap_or_else(|| event.time.naive_utc());
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO identifications (
                 uri, did, cid, subject_uri, subject_cid, subject_index, scientific_name,
                 taxon_rank, identification_remarks, is_agreement, date_identified, indexed_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
             ON CONFLICT (uri) DO UPDATE SET
                 cid = EXCLUDED.cid,
                 subject_uri = EXCLUDED.subject_uri,
@@ -403,18 +419,18 @@ impl Database {
                 date_identified = EXCLUDED.date_identified,
                 indexed_at = NOW()
             "#,
+            &event.uri,
+            &event.did,
+            &event.cid,
+            subject_uri,
+            subject_cid,
+            subject_index,
+            taxon_name,
+            taxon_rank,
+            comment,
+            is_agreement,
+            date_identified
         )
-        .bind(&event.uri)
-        .bind(&event.did)
-        .bind(&event.cid)
-        .bind(subject_uri)
-        .bind(subject_cid)
-        .bind(subject_index)
-        .bind(taxon_name)
-        .bind(taxon_rank)
-        .bind(comment)
-        .bind(is_agreement)
-        .bind(date_identified)
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -423,8 +439,7 @@ impl Database {
     /// Delete an identification record
     pub async fn delete_identification(&self, uri: &str) -> Result<()> {
         debug!("Deleting identification: {}", uri);
-        sqlx::query("DELETE FROM identifications WHERE uri = $1")
-            .bind(uri)
+        sqlx::query!("DELETE FROM identifications WHERE uri = $1", uri)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -473,16 +488,17 @@ impl Database {
                 return Ok(());
             }
         };
-        let fallback_date = event.time.to_rfc3339();
-        let created_at = created_at.unwrap_or(&fallback_date);
+        let created_at = created_at
+            .and_then(parse_naive_datetime)
+            .unwrap_or_else(|| event.time.naive_utc());
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO comments (
                 uri, did, cid, subject_uri, subject_cid, body,
                 reply_to_uri, reply_to_cid, created_at, indexed_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
             ON CONFLICT (uri) DO UPDATE SET
                 cid = EXCLUDED.cid,
                 subject_uri = EXCLUDED.subject_uri,
@@ -493,16 +509,16 @@ impl Database {
                 created_at = EXCLUDED.created_at,
                 indexed_at = NOW()
             "#,
+            &event.uri,
+            &event.did,
+            &event.cid,
+            subject_uri,
+            subject_cid,
+            body,
+            reply_to_uri,
+            reply_to_cid,
+            created_at
         )
-        .bind(&event.uri)
-        .bind(&event.did)
-        .bind(&event.cid)
-        .bind(subject_uri)
-        .bind(subject_cid)
-        .bind(body)
-        .bind(reply_to_uri)
-        .bind(reply_to_cid)
-        .bind(created_at)
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -511,8 +527,7 @@ impl Database {
     /// Delete a comment record
     pub async fn delete_comment(&self, uri: &str) -> Result<()> {
         debug!("Deleting comment: {}", uri);
-        sqlx::query("DELETE FROM comments WHERE uri = $1")
-            .bind(uri)
+        sqlx::query!("DELETE FROM comments WHERE uri = $1", uri)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -521,17 +536,17 @@ impl Database {
     /// Get the saved cursor for resumption
     pub async fn get_cursor(&self) -> Result<Option<i64>> {
         // Value is stored as TEXT for compatibility with existing schema
-        let row: Option<(String,)> =
-            sqlx::query_as("SELECT value FROM ingester_state WHERE key = 'cursor'")
-                .fetch_optional(&self.pool)
-                .await?;
-        Ok(row.and_then(|(v,)| v.parse::<i64>().ok()))
+        let row = sqlx::query!("SELECT value FROM ingester_state WHERE key = 'cursor'")
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.and_then(|r| r.value.parse::<i64>().ok()))
     }
 
     /// Save the cursor for resumption
     pub async fn save_cursor(&self, cursor: i64) -> Result<()> {
         // Value is stored as TEXT for compatibility with existing schema
-        sqlx::query(
+        let cursor_str = cursor.to_string();
+        sqlx::query!(
             r#"
             INSERT INTO ingester_state (key, value, updated_at)
             VALUES ('cursor', $1, NOW())
@@ -539,8 +554,8 @@ impl Database {
                 value = EXCLUDED.value,
                 updated_at = NOW()
             "#,
+            cursor_str
         )
-        .bind(cursor.to_string())
         .execute(&self.pool)
         .await?;
         Ok(())
