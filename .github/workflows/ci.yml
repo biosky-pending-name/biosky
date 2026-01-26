@@ -177,6 +177,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-images]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://biosky-appview-378013734384.us-central1.run.app
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: us-central1
