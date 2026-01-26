@@ -15,6 +15,7 @@ import { ProfileView } from "./components/profile/ProfileView";
 import { TaxonDetail } from "./components/taxon/TaxonDetail";
 import { LoginModal } from "./components/modals/LoginModal";
 import { UploadModal } from "./components/modals/UploadModal";
+import { DeleteConfirmDialog } from "./components/modals/DeleteConfirmDialog";
 import { FAB } from "./components/common/FAB";
 import { ToastContainer } from "./components/common/Toast";
 import { NotFound } from "./components/common/NotFound";
@@ -63,6 +64,7 @@ function AppContent() {
       <BottomNav />
       <LoginModal />
       <UploadModal />
+      <DeleteConfirmDialog />
       <ToastContainer />
     </BrowserRouter>
   );

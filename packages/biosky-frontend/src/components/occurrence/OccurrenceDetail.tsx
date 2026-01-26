@@ -24,7 +24,8 @@ import MyLocationIcon from "@mui/icons-material/MyLocation";
 import NotesIcon from "@mui/icons-material/Notes";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { fetchOccurrence, getImageUrl } from "../../services/api";
-import { useAppSelector } from "../../store";
+import { useAppSelector, useAppDispatch } from "../../store";
+import { openDeleteConfirm } from "../../store/uiSlice";
 import type { Occurrence, Identification, Comment } from "../../services/types";
 import { IdentificationPanel } from "../identification/IdentificationPanel";
 import { IdentificationHistory } from "../identification/IdentificationHistory";
@@ -48,6 +49,7 @@ function getPdslsUrl(atUri: string): string {
 export function OccurrenceDetail() {
   const { uri } = useParams<{ uri: string }>();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
 
   const [occurrence, setOccurrence] = useState<Occurrence | null>(null);
@@ -123,6 +125,13 @@ export function OccurrenceDetail() {
     setAnchorEl(null);
   };
 
+  const handleDeleteClick = () => {
+    handleMenuClose();
+    if (occurrence) {
+      dispatch(openDeleteConfirm(occurrence));
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="sm" sx={{ p: 4, textAlign: "center" }}>
@@ -181,6 +190,9 @@ export function OccurrenceDetail() {
   // Check if there are multiple subjects
   const hasMultipleSubjects = occurrence.subjects && occurrence.subjects.length > 1;
 
+  // Check if current user owns this observation
+  const isOwner = user?.did === occurrence.observer.did;
+
   return (
     <Container
       maxWidth="sm"
@@ -227,6 +239,11 @@ export function OccurrenceDetail() {
             anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
+            {isOwner && (
+              <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
+                Delete
+              </MenuItem>
+            )}
             <MenuItem
               component="a"
               href={getPdslsUrl(occurrence.uri)}

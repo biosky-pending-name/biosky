@@ -22,6 +22,7 @@ import { TaxonLink } from "../common/TaxonLink";
 interface FeedItemProps {
   occurrence: Occurrence;
   onEdit?: (occurrence: Occurrence) => void;
+  onDelete?: (occurrence: Occurrence) => void;
 }
 
 function getPdslsUrl(atUri: string): string {
@@ -39,7 +40,7 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
+export function FeedItem({ occurrence, onEdit, onDelete }: FeedItemProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
   const currentUser = useSelector((state: RootState) => state.auth.user);
@@ -96,6 +97,13 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
     e.stopPropagation();
     handleMenuClose();
     onEdit?.(occurrence);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleMenuClose();
+    onDelete?.(occurrence);
   };
 
   return (
@@ -196,6 +204,11 @@ export function FeedItem({ occurrence, onEdit }: FeedItemProps) {
             >
               {isOwnPost && onEdit && (
                 <MenuItem onClick={handleEditClick}>Edit</MenuItem>
+              )}
+              {isOwnPost && onDelete && (
+                <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
+                  Delete
+                </MenuItem>
               )}
               <MenuItem
                 component="a"

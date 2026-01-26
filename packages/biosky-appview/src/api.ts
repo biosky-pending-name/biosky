@@ -679,6 +679,62 @@ export class AppViewServer {
       }
     });
 
+    // Delete an occurrence (owner only)
+    this.app.delete("/api/occurrences/:uri(*)", async (req, res) => {
+      try {
+        const occurrenceUri = req.params["uri"];
+
+        if (!occurrenceUri) {
+          res.status(400).json({ error: "uri is required" });
+          return;
+        }
+
+        // Parse the AT URI to extract DID, collection, and rkey
+        // Format: at://did:plc:xxx/org.rwell.test.occurrence/rkey
+        const uriMatch = occurrenceUri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
+        if (!uriMatch) {
+          res.status(400).json({ error: "Invalid AT URI format" });
+          return;
+        }
+
+        const recordDid = uriMatch[1]!;
+        const collection = uriMatch[2]!;
+        const rkey = uriMatch[3]!;
+
+        // Require authentication
+        const sessionDid = req.cookies?.session_did;
+        const agent = sessionDid ? await this.oauth.getAgent(sessionDid) : null;
+
+        if (!agent) {
+          res.status(401).json({ error: "Authentication required to delete observations" });
+          return;
+        }
+
+        // Verify user owns this record
+        if (sessionDid !== recordDid) {
+          res.status(403).json({ error: "You can only delete your own observations" });
+          return;
+        }
+
+        // Delete from AT Protocol (user's PDS)
+        await agent.com.atproto.repo.deleteRecord({
+          repo: sessionDid,
+          collection,
+          rkey,
+        });
+
+        logger.info({ uri: occurrenceUri }, "Deleted AT Protocol record");
+
+        // Delete from AppView database (cascading deletes handle identifications, comments, observers)
+        await this.db.deleteOccurrence(occurrenceUri);
+
+        res.json({ success: true, message: "Observation deleted" });
+      } catch (error) {
+        logger.error({ err: error }, "Error deleting occurrence");
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
     // Get observers for an occurrence
     this.app.get("/api/occurrences/:uri(*)/observers", async (req, res) => {
       try {

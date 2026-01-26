@@ -244,6 +244,23 @@ export async function updateOccurrence(data: {
   return response.json();
 }
 
+export async function deleteOccurrence(uri: string): Promise<{ success: boolean }> {
+  const response = await fetch(
+    `${API_BASE}/api/occurrences/${encodeURIComponent(uri)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to delete observation");
+  }
+
+  return response.json();
+}
+
 export function getImageUrl(path: string): string {
   return `${API_BASE}${path}`;
 }

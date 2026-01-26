@@ -36,6 +36,7 @@ interface UIState {
   loginModalOpen: boolean;
   uploadModalOpen: boolean;
   editingOccurrence: Occurrence | null;
+  deleteConfirmOccurrence: Occurrence | null;
   toasts: Toast[];
   currentLocation: { lat: number; lng: number } | null;
   themeMode: ThemeMode;
@@ -48,6 +49,7 @@ const initialState: UIState = {
   loginModalOpen: false,
   uploadModalOpen: false,
   editingOccurrence: null,
+  deleteConfirmOccurrence: null,
   toasts: [],
   currentLocation: null,
   themeMode: storedTheme,
@@ -75,6 +77,12 @@ const uiSlice = createSlice({
     closeUploadModal: (state) => {
       state.uploadModalOpen = false;
       state.editingOccurrence = null;
+    },
+    openDeleteConfirm: (state, action: PayloadAction<Occurrence>) => {
+      state.deleteConfirmOccurrence = action.payload;
+    },
+    closeDeleteConfirm: (state) => {
+      state.deleteConfirmOccurrence = null;
     },
     addToast: (
       state,
@@ -113,6 +121,8 @@ export const {
   openUploadModal,
   openEditModal,
   closeUploadModal,
+  openDeleteConfirm,
+  closeDeleteConfirm,
   addToast,
   removeToast,
   setCurrentLocation,

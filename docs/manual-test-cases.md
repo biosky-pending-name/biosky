@@ -196,6 +196,86 @@ Test cases for BioSky QA.
 
 ---
 
+## Delete Observation
+
+### TC-DELETE-001: Delete option visible for own observation (feed)
+**Precondition:** User is logged in, has created at least one observation
+1. Navigate to feed
+2. Find your own observation
+3. Click the three-dot menu (⋮)
+
+**Expected:** Menu shows "Delete" option in red
+
+### TC-DELETE-002: Delete option hidden for others' observations (feed)
+**Precondition:** User is logged in
+1. Navigate to feed
+2. Find another user's observation
+3. Click the three-dot menu (⋮)
+
+**Expected:** Menu does NOT show "Delete" option
+
+### TC-DELETE-003: Delete option visible for own observation (detail page)
+**Precondition:** User is logged in, has created at least one observation
+1. Navigate to your own observation's detail page
+2. Click the three-dot menu (⋮)
+
+**Expected:** Menu shows "Delete" option in red
+
+### TC-DELETE-004: Delete option hidden for others' observations (detail page)
+**Precondition:** User is logged in
+1. Navigate to another user's observation detail page
+2. Click the three-dot menu (⋮)
+
+**Expected:** Menu does NOT show "Delete" option
+
+### TC-DELETE-005: Delete confirmation dialog
+**Precondition:** User is logged in with own observation
+1. Click "Delete" on your observation
+2. Observe the confirmation dialog
+
+**Expected:**
+- Dialog title: "Delete Observation?"
+- Dialog shows species name
+- Warning about identifications/comments being deleted
+- "Cancel" and "Delete" buttons visible
+
+### TC-DELETE-006: Cancel delete
+**Precondition:** Delete confirmation dialog is open
+1. Click "Cancel"
+
+**Expected:** Dialog closes, observation remains
+
+### TC-DELETE-007: Confirm delete from feed
+**Precondition:** User is logged in with own observation
+1. Navigate to feed
+2. Click "Delete" on your observation
+3. Click "Delete" in confirmation dialog
+
+**Expected:**
+- Delete button shows spinner and "Deleting..."
+- Success toast: "Observation deleted successfully"
+- Page reloads, observation no longer in feed
+
+### TC-DELETE-008: Confirm delete from detail page
+**Precondition:** User is logged in, viewing own observation detail page
+1. Click "Delete" from the menu
+2. Click "Delete" in confirmation dialog
+
+**Expected:**
+- Success toast: "Observation deleted successfully"
+- Redirected to home page
+- Observation no longer exists
+
+### TC-DELETE-009: Deleted observation removes identifications and comments
+**Precondition:** User is logged in, has observation with identifications/comments
+1. Note the observation URI
+2. Delete the observation
+3. Attempt to access the observation via direct URL
+
+**Expected:** 404 or "Occurrence not found" - all related data is gone
+
+---
+
 ## Feed View
 
 ### TC-FEED-001: Feed loads observations

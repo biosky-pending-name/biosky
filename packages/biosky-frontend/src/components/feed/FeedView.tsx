@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { Box, Container, Tabs, Tab, Typography, Button, CircularProgress } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { loadFeed, loadInitialFeed, switchTab } from "../../store/feedSlice";
-import { openEditModal } from "../../store/uiSlice";
+import { openEditModal, openDeleteConfirm } from "../../store/uiSlice";
 import type { FeedTab, Occurrence } from "../../services/types";
 import { FeedItem } from "./FeedItem";
 
@@ -34,6 +34,13 @@ export function FeedView() {
   const handleEdit = useCallback(
     (occurrence: Occurrence) => {
       dispatch(openEditModal(occurrence));
+    },
+    [dispatch]
+  );
+
+  const handleDelete = useCallback(
+    (occurrence: Occurrence) => {
+      dispatch(openDeleteConfirm(occurrence));
     },
     [dispatch]
   );
@@ -81,7 +88,7 @@ export function FeedView() {
       >
         <Box>
           {occurrences.map((occ) => (
-            <FeedItem key={occ.uri} occurrence={occ} onEdit={handleEdit} />
+            <FeedItem key={occ.uri} occurrence={occ} onEdit={handleEdit} onDelete={handleDelete} />
           ))}
         </Box>
 
