@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Paper, BottomNavigation, BottomNavigationAction } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import MapIcon from "@mui/icons-material/Map";
-import { Footer } from "./Footer";
 
 export function BottomNav() {
   const location = useLocation();
@@ -24,7 +23,6 @@ export function BottomNav() {
       }}
       elevation={0}
     >
-      <Footer />
       <BottomNavigation
         value={getValue()}
         onChange={(_, newValue) => {

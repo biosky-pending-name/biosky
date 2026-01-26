@@ -48,7 +48,7 @@ function AppContent() {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          paddingBottom: "100px",
+          paddingBottom: "60px",
         }}
       >
         <Routes>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -6,11 +7,15 @@ import {
   Stack,
   IconButton,
   Tooltip,
+  Menu,
+  MenuItem,
+  Divider,
 } from "@mui/material";
 import {
   DarkMode,
   LightMode,
   SettingsBrightness,
+  Info,
 } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { logout } from "../../store/authSlice";
@@ -20,9 +25,18 @@ export function Header() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const themeMode = useAppSelector((state) => state.ui.themeMode);
+  const [infoAnchor, setInfoAnchor] = useState<null | HTMLElement>(null);
 
   const handleLogout = () => {
     dispatch(logout());
+  };
+
+  const handleInfoOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setInfoAnchor(event.currentTarget);
+  };
+
+  const handleInfoClose = () => {
+    setInfoAnchor(null);
   };
 
   const handleLogin = () => {
@@ -67,6 +81,43 @@ export function Header() {
           BioSky
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
+          <Tooltip title="About">
+            <IconButton
+              onClick={handleInfoOpen}
+              size="small"
+              sx={{ color: "text.secondary" }}
+            >
+              <Info />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            anchorEl={infoAnchor}
+            open={Boolean(infoAnchor)}
+            onClose={handleInfoClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <MenuItem
+              component="a"
+              href="https://github.com/frewsxcv/biosky"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleInfoClose}
+            >
+              Source Code
+            </MenuItem>
+            <MenuItem
+              component="a"
+              href="/api/docs"
+              onClick={handleInfoClose}
+            >
+              API Docs
+            </MenuItem>
+            <Divider />
+            <MenuItem disabled sx={{ opacity: 0.6, fontSize: "0.75rem" }}>
+              © {new Date().getFullYear()} BioSky
+            </MenuItem>
+          </Menu>
           <Tooltip title={getThemeTooltip()}>
             <IconButton
               onClick={cycleTheme}
