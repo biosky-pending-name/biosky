@@ -18,10 +18,14 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "" > src/lib.rs
 # Build dependencies only (this layer will be cached)
 RUN cargo build --release && rm -rf src
 
+# Copy SQLx query cache for offline compilation
+COPY .sqlx ./.sqlx
+
 # Copy real source code
 COPY src ./src
 
-# Build for release (touch to invalidate cache for main.rs)
+# Build for release with offline SQLx (touch to invalidate cache for main.rs)
+ENV SQLX_OFFLINE=true
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
