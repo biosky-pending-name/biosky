@@ -85,7 +85,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo install cargo-audit
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-audit
       - run: cargo audit --file Cargo.lock --ignore RUSTSEC-2023-0071
 
   rust-clippy:
@@ -110,7 +112,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/biosky-ingester
-      - run: cargo install sqlx-cli --no-default-features --features postgres
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: sqlx-cli
+          no-default-features: true
+          features: postgres
       - working-directory: packages/biosky-ingester
         run: cargo sqlx prepare --check
 
