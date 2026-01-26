@@ -17,7 +17,7 @@ See [docs/development.md](docs/development.md) for setup instructions.
 - [Architecture](docs/architecture.md) - System design and components
 - [Development](docs/development.md) - Local setup and commands
 - [Deployment](docs/deployment.md) - Cloud Run deployment
-- [API Reference](docs/api.md) - REST endpoints
+- [API Reference](/api/docs) - Interactive REST API documentation
 - [Darwin Core](docs/darwin-core.md) - Lexicon schemas
 
 ## License
