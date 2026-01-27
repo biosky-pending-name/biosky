@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   Box,
@@ -29,6 +29,7 @@ interface FeedItemProps {
 export function FeedItem({ occurrence, onEdit, onDelete }: FeedItemProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
+  const navigate = useNavigate();
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const isOwnPost = currentUser?.did === occurrence.observer.did;
 
@@ -92,17 +93,25 @@ export function FeedItem({ occurrence, onEdit, onDelete }: FeedItemProps) {
     onDelete?.(occurrence);
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements (links, buttons)
+    const target = e.target as HTMLElement;
+    if (target.closest('a, button')) {
+      return;
+    }
+    navigate(occurrenceUrl);
+  };
+
   return (
     <Box
-      component={Link}
-      to={occurrenceUrl}
+      onClick={handleCardClick}
       sx={{
         display: "flex",
         gap: 1.5,
         p: 2,
         borderBottom: 1,
         borderColor: "divider",
-        textDecoration: "none",
+        cursor: "pointer",
         color: "inherit",
         "&:hover": { bgcolor: "rgba(255, 255, 255, 0.03)" },
       }}
