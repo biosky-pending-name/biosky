@@ -6,7 +6,7 @@
   "type": "module",
   "main": "./dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "tsx src/server.ts",
     "test:run": "echo 'No tests in biosky-api yet'"
   },
