@@ -14,6 +14,7 @@ import { Database, type IdentificationRow } from "../database/index.js";
 
 interface CommunityIdResult {
   scientificName: string;
+  kingdom?: string | undefined;
   taxonRank?: string | undefined;
   identificationCount: number;
   agreementCount: number;
@@ -23,6 +24,7 @@ interface CommunityIdResult {
 
 interface TaxonCount {
   scientificName: string;
+  kingdom?: string | undefined;
   taxonRank?: string | undefined;
   count: number;
   agreementCount: number;
@@ -73,6 +75,7 @@ export class CommunityIdCalculator {
 
     return {
       scientificName: winner.scientificName,
+      kingdom: winner.kingdom,
       taxonRank: winner.taxonRank,
       identificationCount: identifications.length,
       agreementCount: winner.count,
@@ -104,13 +107,15 @@ export class CommunityIdCalculator {
   }
 
   /**
-   * Group identifications by scientific name
+   * Group identifications by scientific name and kingdom to avoid
+   * conflating cross-kingdom homonyms (hemihomonyms).
    */
   private groupByTaxon(identifications: IdentificationRow[]): TaxonCount[] {
     const counts = new Map<string, TaxonCount>();
 
     for (const id of identifications) {
-      const key = id.scientific_name.toLowerCase();
+      const kingdom = (id.kingdom || "").toLowerCase();
+      const key = `${id.scientific_name.toLowerCase()}|${kingdom}`;
       const existing = counts.get(key);
 
       if (existing) {
@@ -121,6 +126,7 @@ export class CommunityIdCalculator {
       } else {
         counts.set(key, {
           scientificName: id.scientific_name,
+          kingdom: id.kingdom || undefined,
           taxonRank: id.taxon_rank || undefined,
           count: 1,
           agreementCount: id.is_agreement ? 1 : 0,

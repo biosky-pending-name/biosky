@@ -125,6 +125,64 @@ describe("CommunityIdCalculator", () => {
       expect(result?.scientificName).toBe("Quercus alba");
     });
 
+    it("separates cross-kingdom homonyms into distinct groups", async () => {
+      // "Ficus" exists as both a plant genus and a gastropod genus
+      mockDb.getIdentificationsForOccurrence.mockResolvedValue([
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Plantae" }),
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Plantae" }),
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Animalia" }),
+      ]);
+
+      const result = await calculator.calculate("at://test/occurrence/1");
+
+      // Plantae Ficus should win with 2 votes vs Animalia Ficus with 1
+      expect(result?.scientificName).toBe("Ficus");
+      expect(result?.kingdom).toBe("Plantae");
+      expect(result?.agreementCount).toBe(2);
+      expect(result?.identificationCount).toBe(3);
+    });
+
+    it("does not conflate same name across kingdoms for research grade", async () => {
+      // Same name, different kingdoms — should not count as 3 agreeing IDs
+      mockDb.getIdentificationsForOccurrence.mockResolvedValue([
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Plantae" }),
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Animalia" }),
+        createMockIdentification({ scientific_name: "Ficus", kingdom: "Fungi" }),
+      ]);
+
+      const result = await calculator.calculate("at://test/occurrence/1");
+
+      // Each kingdom group has only 1 vote, so no 2/3 majority
+      expect(result?.agreementCount).toBe(1);
+      expect(result?.isResearchGrade).toBe(false);
+    });
+
+    it("groups same name with same kingdom together", async () => {
+      mockDb.getIdentificationsForOccurrence.mockResolvedValue([
+        createMockIdentification({ scientific_name: "Quercus alba", kingdom: "Plantae" }),
+        createMockIdentification({ scientific_name: "Quercus alba", kingdom: "Plantae" }),
+      ]);
+
+      const result = await calculator.calculate("at://test/occurrence/1");
+
+      expect(result?.scientificName).toBe("Quercus alba");
+      expect(result?.kingdom).toBe("Plantae");
+      expect(result?.agreementCount).toBe(2);
+      expect(result?.isResearchGrade).toBe(true);
+    });
+
+    it("treats null kingdom identifications as a single group", async () => {
+      mockDb.getIdentificationsForOccurrence.mockResolvedValue([
+        createMockIdentification({ scientific_name: "Quercus alba", kingdom: null }),
+        createMockIdentification({ scientific_name: "Quercus alba", kingdom: null }),
+      ]);
+
+      const result = await calculator.calculate("at://test/occurrence/1");
+
+      expect(result?.agreementCount).toBe(2);
+      expect(result?.isResearchGrade).toBe(true);
+    });
+
     it("preserves taxon rank from identification", async () => {
       mockDb.getIdentificationsForOccurrence.mockResolvedValue([
         createMockIdentification({ scientific_name: "Quercus", taxon_rank: "genus" }),

@@ -75,7 +75,8 @@ export function createTaxonomyRoutes(
       // Get observation count for this taxon
       const observationCount = await db.countOccurrencesByTaxon(
         taxon.scientificName,
-        taxon.rank
+        taxon.rank,
+        taxon.kingdom,
       );
 
       res.json({
@@ -118,6 +119,7 @@ export function createTaxonomyRoutes(
       const rows = await db.getOccurrencesByTaxon(taxon.scientificName, taxon.rank, {
         limit,
         ...(cursor && { cursor }),
+        kingdom: taxon.kingdom,
       });
 
       const occurrences = await enrichOccurrences(db, rows);

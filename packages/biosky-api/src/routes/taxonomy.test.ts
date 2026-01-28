@@ -199,6 +199,35 @@ describe("taxonomy routes", () => {
       expect(mockTaxonomy.getById).toHaveBeenCalledWith("gbif:99999");
     });
 
+    it("passes kingdom to countOccurrencesByTaxon for disambiguation", async () => {
+      const taxon = createMockTaxon({ kingdom: "Animalia" });
+      mockTaxonomy.getById.mockResolvedValue(taxon);
+      mockDb.countOccurrencesByTaxon.mockResolvedValue(7);
+
+      const res = await request(app).get("/taxonomy/gbif:12345");
+
+      expect(res.status).toBe(200);
+      expect(mockDb.countOccurrencesByTaxon).toHaveBeenCalledWith(
+        "Quercus alba",
+        "SPECIES",
+        "Animalia"
+      );
+    });
+
+    it("passes undefined kingdom when taxon has no kingdom", async () => {
+      const taxon = createMockTaxon({ kingdom: undefined });
+      mockTaxonomy.getById.mockResolvedValue(taxon);
+      mockDb.countOccurrencesByTaxon.mockResolvedValue(0);
+
+      await request(app).get("/taxonomy/gbif:12345");
+
+      expect(mockDb.countOccurrencesByTaxon).toHaveBeenCalledWith(
+        "Quercus alba",
+        "SPECIES",
+        undefined
+      );
+    });
+
     it("returns 404 when taxon not found by ID", async () => {
       mockTaxonomy.getById.mockResolvedValue(null);
 
@@ -256,7 +285,7 @@ describe("taxonomy routes", () => {
       expect(mockDb.getOccurrencesByTaxon).toHaveBeenCalledWith(
         "Quercus alba",
         "SPECIES",
-        { limit: 20 }
+        { limit: 20, kingdom: "Plantae" }
       );
     });
 
@@ -305,7 +334,7 @@ describe("taxonomy routes", () => {
       expect(mockDb.getOccurrencesByTaxon).toHaveBeenCalledWith(
         "Quercus alba",
         "SPECIES",
-        { limit: 20, cursor: "2024-01-01T00:00:00.000Z" }
+        { limit: 20, cursor: "2024-01-01T00:00:00.000Z", kingdom: "Plantae" }
       );
     });
 
@@ -319,14 +348,14 @@ describe("taxonomy routes", () => {
       expect(mockDb.getOccurrencesByTaxon).toHaveBeenCalledWith(
         "Quercus alba",
         "SPECIES",
-        { limit: 50 }
+        { limit: 50, kingdom: "Plantae" }
       );
 
       await request(app).get("/taxonomy/gbif:12345/occurrences?limit=200");
       expect(mockDb.getOccurrencesByTaxon).toHaveBeenLastCalledWith(
         "Quercus alba",
         "SPECIES",
-        { limit: 100 }
+        { limit: 100, kingdom: "Plantae" }
       );
     });
 
@@ -357,6 +386,21 @@ describe("taxonomy routes", () => {
       const res = await request(app).get("/taxonomy/gbif:12345/occurrences");
 
       expect(res.body.cursor).toBeUndefined();
+    });
+
+    it("passes kingdom to getOccurrencesByTaxon for disambiguation", async () => {
+      const taxon = createMockTaxon({ kingdom: "Animalia" });
+      mockTaxonomy.getById.mockResolvedValue(taxon);
+      mockDb.getOccurrencesByTaxon.mockResolvedValue([]);
+      vi.mocked(enrichOccurrences).mockResolvedValue([]);
+
+      await request(app).get("/taxonomy/gbif:12345/occurrences");
+
+      expect(mockDb.getOccurrencesByTaxon).toHaveBeenCalledWith(
+        "Quercus alba",
+        "SPECIES",
+        { limit: 20, kingdom: "Animalia" }
+      );
     });
 
     it("returns 404 when taxon not found", async () => {

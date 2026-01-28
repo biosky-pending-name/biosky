@@ -227,21 +227,23 @@ export class Database {
 
       -- Community ID materialized view (refreshed periodically)
       -- Groups by subject_index to support multiple subjects per occurrence
+      -- Includes kingdom to disambiguate cross-kingdom homonyms
       DROP MATERIALIZED VIEW IF EXISTS community_ids;
       CREATE MATERIALIZED VIEW community_ids AS
       SELECT
         o.uri as occurrence_uri,
         i.subject_index,
         i.scientific_name,
+        i.kingdom,
         COUNT(*) as id_count,
         COUNT(*) FILTER (WHERE i.is_agreement) as agreement_count
       FROM occurrences o
       JOIN identifications i ON i.subject_uri = o.uri
-      GROUP BY o.uri, i.subject_index, i.scientific_name
+      GROUP BY o.uri, i.subject_index, i.scientific_name, i.kingdom
       ORDER BY o.uri, i.subject_index, id_count DESC;
 
       CREATE UNIQUE INDEX IF NOT EXISTS community_ids_uri_subject_taxon_idx
-        ON community_ids(occurrence_uri, subject_index, scientific_name);
+        ON community_ids(occurrence_uri, subject_index, scientific_name, kingdom);
 
       -- Private location data (AppView-managed, stores exact coords for privacy)
       CREATE TABLE IF NOT EXISTS occurrence_private_data (
@@ -259,11 +261,14 @@ export class Database {
         ON occurrence_private_data USING GIST(exact_location);
 
       -- Sensitive species list (for auto-obscuration rules)
+      -- Uses composite PK with kingdom to disambiguate cross-kingdom homonyms
       CREATE TABLE IF NOT EXISTS sensitive_species (
-        scientific_name TEXT PRIMARY KEY,
+        scientific_name TEXT NOT NULL,
+        kingdom TEXT NOT NULL DEFAULT '',
         geoprivacy TEXT NOT NULL CHECK (geoprivacy IN ('obscured', 'private')),
         reason TEXT,
-        source TEXT
+        source TEXT,
+        PRIMARY KEY (scientific_name, kingdom)
       );
 
       -- Occurrence observers (for multi-user observations)
@@ -679,6 +684,7 @@ export class Database {
     limit?: number;
     cursor?: string;
     taxon?: string;
+    kingdom?: string;
     lat?: number;
     lng?: number;
     radius?: number;
@@ -690,6 +696,11 @@ export class Database {
     if (options.taxon) {
       conditions.push(`scientific_name ILIKE $${paramIndex++}`);
       params.push(`${options.taxon}%`);
+    }
+
+    if (options.kingdom) {
+      conditions.push(`kingdom = $${paramIndex++}`);
+      params.push(options.kingdom);
     }
 
     if (options.lat !== undefined && options.lng !== undefined) {
@@ -755,7 +766,7 @@ export class Database {
          LEFT JOIN occurrence_observers oo ON o.uri = oo.occurrence_uri
          WHERE o.did = $1 OR oo.observer_did = $1) as observation_count,
         (SELECT COUNT(*) FROM identifications WHERE did = $1) as identification_count,
-        (SELECT COUNT(DISTINCT o.scientific_name) FROM occurrences o
+        (SELECT COUNT(DISTINCT (o.scientific_name, o.kingdom)) FROM occurrences o
          LEFT JOIN occurrence_observers oo ON o.uri = oo.occurrence_uri
          WHERE (o.did = $1 OR oo.observer_did = $1) AND o.scientific_name IS NOT NULL) as species_count`,
       [did],
@@ -1105,7 +1116,7 @@ export class Database {
   async getOccurrencesByTaxon(
     taxonName: string,
     taxonRank: string,
-    options: { limit?: number; cursor?: string } = {},
+    options: { limit?: number; cursor?: string; kingdom?: string } = {},
   ): Promise<OccurrenceRow[]> {
     const limit = options.limit || 20;
     const params: (string | number)[] = [];
@@ -1143,6 +1154,12 @@ export class Database {
       params.push(taxonName);
     }
 
+    // Disambiguate cross-kingdom homonyms when kingdom is provided
+    if (options.kingdom && rankLower !== "kingdom") {
+      condition += ` AND kingdom = $${paramIndex++}`;
+      params.push(options.kingdom);
+    }
+
     if (options.cursor) {
       condition += ` AND created_at < $${paramIndex++}`;
       params.push(options.cursor);
@@ -1173,35 +1190,42 @@ export class Database {
   /**
    * Count occurrences matching a taxon
    */
-  async countOccurrencesByTaxon(taxonName: string, taxonRank: string): Promise<number> {
+  async countOccurrencesByTaxon(taxonName: string, taxonRank: string, kingdom?: string): Promise<number> {
     const rankLower = taxonRank.toLowerCase();
     let condition: string;
     const params: string[] = [];
+    let paramIndex = 1;
 
     if (rankLower === "species" || rankLower === "subspecies" || rankLower === "variety") {
-      condition = "scientific_name = $1";
+      condition = `scientific_name = $${paramIndex++}`;
       params.push(taxonName);
     } else if (rankLower === "genus") {
-      condition = "(genus = $1 OR scientific_name ILIKE $2)";
+      condition = `(genus = $${paramIndex++} OR scientific_name ILIKE $${paramIndex++})`;
       params.push(taxonName, `${taxonName} %`);
     } else if (rankLower === "family") {
-      condition = "family = $1";
+      condition = `family = $${paramIndex++}`;
       params.push(taxonName);
     } else if (rankLower === "order") {
-      condition = '"order" = $1';
+      condition = `"order" = $${paramIndex++}`;
       params.push(taxonName);
     } else if (rankLower === "class") {
-      condition = "class = $1";
+      condition = `class = $${paramIndex++}`;
       params.push(taxonName);
     } else if (rankLower === "phylum") {
-      condition = "phylum = $1";
+      condition = `phylum = $${paramIndex++}`;
       params.push(taxonName);
     } else if (rankLower === "kingdom") {
-      condition = "kingdom = $1";
+      condition = `kingdom = $${paramIndex++}`;
       params.push(taxonName);
     } else {
-      condition = "scientific_name = $1";
+      condition = `scientific_name = $${paramIndex++}`;
       params.push(taxonName);
+    }
+
+    // Disambiguate cross-kingdom homonyms when kingdom is provided
+    if (kingdom && rankLower !== "kingdom") {
+      condition += ` AND kingdom = $${paramIndex++}`;
+      params.push(kingdom);
     }
 
     const result = await this.pool.query(

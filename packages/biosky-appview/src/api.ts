@@ -1407,6 +1407,7 @@ export class AppViewServer {
         const observationCount = await this.db.countOccurrencesByTaxon(
           taxon.scientificName,
           taxon.rank,
+          taxon.kingdom,
         );
 
         res.json({
@@ -1450,7 +1451,7 @@ export class AppViewServer {
         const rows = await this.db.getOccurrencesByTaxon(
           taxon.scientificName,
           taxon.rank,
-          { limit, ...(cursor && { cursor }) },
+          { limit, ...(cursor && { cursor }), kingdom: taxon.kingdom },
         );
 
         const occurrences = await this.enrichOccurrences(rows);
