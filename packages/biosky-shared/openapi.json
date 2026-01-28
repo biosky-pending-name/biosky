@@ -441,6 +441,9 @@
           },
           "identifier": {
             "$ref": "#/components/schemas/Profile"
+          },
+          "kingdom": {
+            "type": "string"
           }
         },
         "required": [
@@ -862,6 +865,10 @@
           },
           "observationCount": {
             "type": "integer"
+          },
+          "gbifUrl": {
+            "type": "string",
+            "description": "URL to the GBIF species page"
           }
         },
         "required": [
