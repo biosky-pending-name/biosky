@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Container,
@@ -10,14 +10,19 @@ import {
   IconButton,
   Chip,
   Divider,
-  Card,
-  CardMedia,
   Link as MuiLink,
-  Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Breadcrumbs,
+  ImageList,
+  ImageListItem,
+  ImageListItemBar,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { fetchTaxon, fetchTaxonOccurrences } from "../../services/api";
 import type { TaxonDetail as TaxonDetailType, Occurrence } from "../../services/types";
 import { slugToName } from "../../lib/taxonSlug";
@@ -225,162 +230,183 @@ export function TaxonDetail() {
           )}
         </Typography>
 
-        {/* Taxonomy Hierarchy (Ancestors) */}
+        {/* Taxonomy Hierarchy (Ancestors) - using Breadcrumbs */}
         {taxon.ancestors.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              Classification
-            </Typography>
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
-              {taxon.ancestors.map((ancestor, idx) => (
-                <Stack key={ancestor.id} direction="row" alignItems="center" spacing={0.5}>
-                  {idx > 0 && (
-                    <ChevronRightIcon sx={{ fontSize: 16, color: "text.disabled" }} />
-                  )}
+          <Accordion defaultExpanded sx={{ mt: 3, bgcolor: "transparent", boxShadow: "none" }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ px: 0, minHeight: "auto", "& .MuiAccordionSummary-content": { my: 1 } }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                Classification
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <Breadcrumbs
+                separator={<ChevronRightIcon sx={{ fontSize: 16, color: "text.disabled" }} />}
+                aria-label="taxonomy breadcrumb"
+                sx={{ "& .MuiBreadcrumbs-ol": { flexWrap: "wrap", gap: 0.5 } }}
+              >
+                {taxon.ancestors.map((ancestor) => (
                   <TaxonLink
+                    key={ancestor.id}
                     name={ancestor.name}
                     kingdom={taxon.kingdom}
                     rank={ancestor.rank}
                     variant="chip"
                     italic={ancestor.rank === "genus"}
                   />
-                </Stack>
-              ))}
-            </Stack>
-          </Box>
+                ))}
+              </Breadcrumbs>
+            </AccordionDetails>
+          </Accordion>
         )}
 
         {/* Children Taxa */}
         {taxon.children.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              {taxon.rank === "genus" ? "Species" : "Child Taxa"} ({taxon.children.length})
-            </Typography>
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5, gap: 0.5 }}>
-              {taxon.children.map((child) => (
-                <TaxonLink
-                  key={child.id}
-                  name={child.scientificName}
-                  kingdom={taxon.kingdom}
-                  rank={child.rank}
-                  variant="chip"
-                />
-              ))}
-            </Stack>
-          </Box>
+          <Accordion sx={{ bgcolor: "transparent", boxShadow: "none" }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ px: 0, minHeight: "auto", "& .MuiAccordionSummary-content": { my: 1 } }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                {taxon.rank === "genus" ? "Species" : "Child Taxa"} ({taxon.children.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                {taxon.children.map((child) => (
+                  <TaxonLink
+                    key={child.id}
+                    name={child.scientificName}
+                    kingdom={taxon.kingdom}
+                    rank={child.rank}
+                    variant="chip"
+                  />
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         )}
 
-        {/* Media Gallery */}
+        {/* Media Gallery - using ImageList */}
         {taxon.media && taxon.media.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              Media
-            </Typography>
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                mt: 1,
-                overflowX: "auto",
-                pb: 1,
-                "&::-webkit-scrollbar": { height: 6 },
-                "&::-webkit-scrollbar-thumb": { bgcolor: "grey.700", borderRadius: 3 },
-              }}
+          <Accordion defaultExpanded sx={{ bgcolor: "transparent", boxShadow: "none" }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ px: 0, minHeight: "auto", "& .MuiAccordionSummary-content": { my: 1 } }}
             >
-              {taxon.media.map((m, idx) => (
-                <Card
-                  key={idx}
-                  sx={{
-                    minWidth: 150,
-                    maxWidth: 150,
-                    bgcolor: "background.paper",
-                    flexShrink: 0,
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    height="100"
-                    image={m.url}
-                    alt={m.title || `Media ${idx + 1}`}
-                    sx={{ objectFit: "cover" }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                  {(m.title || m.creator) && (
-                    <Box sx={{ p: 0.5 }}>
-                      {m.title && (
-                        <Typography variant="caption" noWrap display="block">
-                          {m.title}
-                        </Typography>
-                      )}
-                      {m.creator && (
-                        <Typography variant="caption" color="text.secondary" noWrap display="block">
-                          {m.creator}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </Card>
-              ))}
-            </Stack>
-          </Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Media ({taxon.media.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <ImageList
+                variant="masonry"
+                cols={3}
+                gap={8}
+                sx={{
+                  m: 0,
+                  "@media (max-width: 600px)": { "& > li": { width: "calc(50% - 4px) !important" } },
+                }}
+              >
+                {taxon.media.map((m, idx) => (
+                  <ImageListItem key={idx}>
+                    <img
+                      src={m.url}
+                      alt={m.title || `Media ${idx + 1}`}
+                      loading="lazy"
+                      style={{ borderRadius: 4 }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    {(m.title || m.creator) && (
+                      <ImageListItemBar
+                        title={m.title}
+                        subtitle={m.creator}
+                        sx={{
+                          borderRadius: "0 0 4px 4px",
+                          "& .MuiImageListItemBar-title": { fontSize: "0.75rem" },
+                          "& .MuiImageListItemBar-subtitle": { fontSize: "0.65rem" },
+                        }}
+                      />
+                    )}
+                  </ImageListItem>
+                ))}
+              </ImageList>
+            </AccordionDetails>
+          </Accordion>
         )}
 
         {/* Descriptions */}
         {taxon.descriptions && taxon.descriptions.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              Description
-            </Typography>
-            {taxon.descriptions.slice(0, 2).map((d, idx) => (
-              <Box key={idx} sx={{ mt: 1 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 4,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {d.description}
-                </Typography>
-                {d.source && (
-                  <Typography variant="caption" color="text.secondary">
-                    Source: {d.source}
+          <Accordion sx={{ bgcolor: "transparent", boxShadow: "none" }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ px: 0, minHeight: "auto", "& .MuiAccordionSummary-content": { my: 1 } }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                Description
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              {taxon.descriptions.slice(0, 2).map((d, idx) => (
+                <Box key={idx} sx={{ mb: idx < taxon.descriptions!.length - 1 ? 2 : 0 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 6,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {d.description}
                   </Typography>
-                )}
-              </Box>
-            ))}
-          </Box>
+                  {d.source && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                      Source: {d.source}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+            </AccordionDetails>
+          </Accordion>
         )}
 
         {/* References */}
         {taxon.references && taxon.references.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              References
-            </Typography>
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              {taxon.references.slice(0, 5).map((r, idx) => (
-                <Typography key={idx} variant="caption" color="text.secondary">
-                  {r.link || r.doi ? (
-                    <MuiLink
-                      href={r.link || `https://doi.org/${r.doi}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      color="primary"
-                    >
-                      {r.citation}
-                    </MuiLink>
-                  ) : (
-                    r.citation
-                  )}
-                </Typography>
-              ))}
-            </Stack>
-          </Box>
+          <Accordion sx={{ bgcolor: "transparent", boxShadow: "none" }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ px: 0, minHeight: "auto", "& .MuiAccordionSummary-content": { my: 1 } }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                References ({taxon.references.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <Stack spacing={0.5}>
+                {taxon.references.slice(0, 5).map((r, idx) => (
+                  <Typography key={idx} variant="caption" color="text.secondary">
+                    {r.link || r.doi ? (
+                      <MuiLink
+                        href={r.link || `https://doi.org/${r.doi}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="primary"
+                      >
+                        {r.citation}
+                      </MuiLink>
+                    ) : (
+                      r.citation
+                    )}
+                  </Typography>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         )}
 
         {/* External Link */}
