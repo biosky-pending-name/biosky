@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -91,8 +91,10 @@ export function Header() {
       <Toolbar sx={{ justifyContent: "space-between" }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Typography
+            component={Link}
+            to="/"
             variant="h6"
-            sx={{ fontWeight: 600, color: "primary.main" }}
+            sx={{ fontWeight: 600, color: "primary.main", textDecoration: "none" }}
           >
             BioSky
           </Typography>
