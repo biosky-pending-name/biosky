@@ -105,6 +105,11 @@ const createAppTheme = (mode: PaletteMode): Theme => {
             display: "flex",
             flexDirection: "column",
           },
+          // Focus-visible accessibility styles using theme colors
+          "*:focus-visible": {
+            outline: `2px solid ${palette.primary.main}`,
+            outlineOffset: "2px",
+          },
         },
       },
       MuiButton: {

@@ -30,40 +30,7 @@
   }
 }
 
-/* Focus-visible accessibility styles */
-*:focus-visible {
-  outline: 2px solid #22c55e;
-  outline-offset: 2px;
-}
-
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid #22c55e;
-  outline-offset: 2px;
-}
-
 /* Smooth transitions for interactive elements */
 a, button, [role="button"] {
   transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-/* MapLibre popup overrides */
-.maplibregl-popup-content {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 0;
-  color: #fafafa;
-  min-width: 280px;
-}
-
-.maplibregl-popup-tip {
-  border-top-color: #1a1a1a;
-}
-
-.maplibregl-popup-close-button {
-  color: #fafafa;
-  font-size: 1.25rem;
-  padding: 0.5rem;
 }
