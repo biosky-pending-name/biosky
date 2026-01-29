@@ -16,19 +16,19 @@ npm install
 
 ```bash
 # Using Docker with PostGIS
-docker run --name biosky-postgres \
+docker run --name observing-postgres \
   -e POSTGRES_PASSWORD=mysecretpassword \
   -p 5432:5432 \
   -d postgis/postgis
 
 # Create database
-docker exec -it biosky-postgres createdb -U postgres biosky
+docker exec -it observing-postgres createdb -U postgres observing
 ```
 
 ## Configuration
 
 ```bash
-export DATABASE_URL="postgresql://postgres:mysecretpassword@localhost:5432/biosky"
+export DATABASE_URL="postgresql://postgres:mysecretpassword@localhost:5432/observing"
 export PORT=3000
 ```
 
@@ -92,10 +92,10 @@ Service names: `cloud-sql-proxy`, `appview`, `frontend`, `media-proxy`, `ingeste
 
 ```bash
 # Ingester
-cd packages/biosky-ingester
+cd packages/observing-ingester
 DATABASE_URL="postgresql://..." cargo run
 
 # Media Proxy
-cd packages/biosky-media-proxy
+cd packages/observing-media-proxy
 cargo run
 ```

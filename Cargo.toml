@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "packages/biosky-ingester",
-    "packages/biosky-media-proxy",
+    "packages/observing-ingester",
+    "packages/observing-media-proxy",
 ]
 
 [profile.release]

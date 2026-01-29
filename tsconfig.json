@@ -21,7 +21,7 @@
     "skipLibCheck": true
   },
   "references": [
-    { "path": "./packages/biosky-appview" }
+    { "path": "./packages/observing-appview" }
   ],
   "include": ["scripts/**/*", "prisma.config.ts"],
   "exclude": ["node_modules", "dist", "packages"]

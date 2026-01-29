@@ -1,5 +1,5 @@
 {
-  "name": "biosky",
+  "name": "observing",
   "version": "0.1.0",
   "private": true,
   "description": "Decentralized biodiversity platform on AT Protocol",
@@ -9,16 +9,16 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w biosky-shared -w biosky-appview -w biosky-api -w biosky-frontend",
-    "dev": "npm run dev --workspace=biosky-appview",
+    "build": "npm run build -w observing-shared -w observing-appview -w observing-api -w observing-frontend",
+    "dev": "npm run dev --workspace=observing-appview",
     "generate-types": "node scripts/generate-types.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "appview": "npm run start --workspace=biosky-appview",
-    "api": "npm run start --workspace=biosky-api",
-    "frontend:dev": "npm run dev --workspace=biosky-frontend",
-    "frontend:build": "npm run build --workspace=biosky-frontend"
+    "appview": "npm run start --workspace=observing-appview",
+    "api": "npm run start --workspace=observing-api",
+    "frontend:dev": "npm run dev --workspace=observing-frontend",
+    "frontend:build": "npm run build --workspace=observing-frontend"
   },
   "devDependencies": {
     "@atproto/lex-cli": "^0.9.8",

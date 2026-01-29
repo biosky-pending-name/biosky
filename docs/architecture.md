@@ -36,21 +36,21 @@ flowchart TB
 
 ```
 packages/
-├── biosky-api/         # REST API server (Express)
-├── biosky-appview/     # OAuth, static files, internal RPC (Express)
-├── biosky-ingester/    # AT Protocol firehose consumer (Rust)
-├── biosky-media-proxy/ # Image caching proxy (Rust)
-└── biosky-frontend/    # Web UI (Vite + MapLibre GL)
+├── observing-api/         # REST API server (Express)
+├── observing-appview/     # OAuth, static files, internal RPC (Express)
+├── observing-ingester/    # AT Protocol firehose consumer (Rust)
+├── observing-media-proxy/ # Image caching proxy (Rust)
+└── observing-frontend/    # Web UI (Vite + MapLibre GL)
 ```
 
 ### Package Dependencies
 
 ```
-biosky-api (TypeScript, calls appview for AT Protocol writes)
-biosky-appview (TypeScript, handles OAuth and PDS operations)
-biosky-frontend (communicates with api and appview via REST)
-biosky-media-proxy (standalone Rust binary)
-biosky-ingester (standalone Rust binary)
+observing-api (TypeScript, calls appview for AT Protocol writes)
+observing-appview (TypeScript, handles OAuth and PDS operations)
+observing-frontend (communicates with api and appview via REST)
+observing-media-proxy (standalone Rust binary)
+observing-ingester (standalone Rust binary)
 ```
 
 ## Components
@@ -62,7 +62,7 @@ Darwin Core compliant schemas for biodiversity data following [TDWG standards](h
 - `org.rwell.test.occurrence` - Occurrence records
 - `org.rwell.test.identification` - Taxonomic determinations
 
-### Ingester (`packages/biosky-ingester/`)
+### Ingester (`packages/observing-ingester/`)
 
 Rust service that monitors the AT Protocol firehose.
 
@@ -70,7 +70,7 @@ Rust service that monitors the AT Protocol firehose.
 - **Event Processing** - Handles occurrence and identification records
 - **Built with** - Tokio, Axum, SQLx
 
-### API Service (`packages/biosky-api/`)
+### API Service (`packages/observing-api/`)
 
 TypeScript REST API server handling read and write operations.
 
@@ -79,7 +79,7 @@ TypeScript REST API server handling read and write operations.
 - **Session Auth** - Verifies OAuth sessions from shared database
 - **Data Enrichment** - Adds profile data and community IDs to responses
 
-### AppView (`packages/biosky-appview/`)
+### AppView (`packages/observing-appview/`)
 
 TypeScript server handling OAuth and AT Protocol operations.
 
@@ -87,14 +87,14 @@ TypeScript server handling OAuth and AT Protocol operations.
 - **Internal RPC** - Endpoints for blob upload, record create/update/delete
 - **Static Files** - Serves the built frontend
 
-### Media Proxy (`packages/biosky-media-proxy/`)
+### Media Proxy (`packages/observing-media-proxy/`)
 
 Rust image caching service.
 
 - **Image Cache** - Caches and proxies image blobs from PDS servers
 - **Stateless** - No database, filesystem cache only
 
-### Frontend (`packages/biosky-frontend/`)
+### Frontend (`packages/observing-frontend/`)
 
 Vite + React SPA.
 
@@ -105,11 +105,11 @@ Vite + React SPA.
 ## Key Files
 
 - `lexicons/` - AT Protocol lexicon definitions
-- `packages/biosky-api/src/routes/` - REST API endpoint handlers
-- `packages/biosky-api/src/internal-client.ts` - RPC client for AppView
-- `packages/biosky-appview/src/database/` - PostgreSQL + PostGIS layer
-- `packages/biosky-appview/src/auth/` - OAuth and identity resolution
-- `packages/biosky-appview/src/generated/` - Generated TypeScript from lexicons
+- `packages/observing-api/src/routes/` - REST API endpoint handlers
+- `packages/observing-api/src/internal-client.ts` - RPC client for AppView
+- `packages/observing-appview/src/database/` - PostgreSQL + PostGIS layer
+- `packages/observing-appview/src/auth/` - OAuth and identity resolution
+- `packages/observing-appview/src/generated/` - Generated TypeScript from lexicons
 - `scripts/generate-types.js` - Lexicon → TypeScript generator
 - `cloudbuild.yaml` - Multi-service Cloud Build config
 

@@ -1,4 +1,4 @@
-# BioSky Design Principles
+# Observ.ing Design Principles
 
 ## 1. Defer to Established Standards
 
@@ -18,4 +18,4 @@ Make it easy for users to export their data:
 - **No lock-in** — Users own their observations; the AT Protocol already provides this at the protocol level
 - **Bulk operations** — Provide straightforward mechanisms to export all observations at once
 
-Users should never feel trapped. If BioSky disappears tomorrow, their biodiversity records should live on.
+Users should never feel trapped. If Observ.ing disappears tomorrow, their biodiversity records should live on.

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const lexiconsDir = join(rootDir, 'lexicons');
-const generatedDir = join(rootDir, 'packages/biosky-appview/src/generated');
+const generatedDir = join(rootDir, 'packages/observing-appview/src/generated');
 
 // Find all lexicon JSON files
 function findLexiconFiles(dir) {

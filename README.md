@@ -1,10 +1,10 @@
-# BioSky
+# Observ.ing
 
 A decentralized biodiversity observation platform built on the AT Protocol.
 
 ## Overview
 
-BioSky lets users record and share biodiversity observations on the federated AT Protocol network. Data follows [Darwin Core](https://dwc.tdwg.org/) standards for scientific interoperability.
+Observ.ing lets users record and share biodiversity observations on the federated AT Protocol network. Data follows [Darwin Core](https://dwc.tdwg.org/) standards for scientific interoperability.
 
 **Your data, your server** - Observations are stored on your Personal Data Server (PDS), not a central database.
 

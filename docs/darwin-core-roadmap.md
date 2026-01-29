@@ -1,6 +1,6 @@
 # Darwin Core Alignment Roadmap
 
-This document tracks planned improvements to align BioSky more closely with the [Darwin Core Conceptual Model (DwC-CM)](https://gbif.github.io/dwc-dp/#cm) and [Darwin Core Data Package (DwC-DP)](https://gbif.github.io/dwc-dp/) specifications.
+This document tracks planned improvements to align Observ.ing more closely with the [Darwin Core Conceptual Model (DwC-CM)](https://gbif.github.io/dwc-dp/#cm) and [Darwin Core Data Package (DwC-DP)](https://gbif.github.io/dwc-dp/) specifications.
 
 ## Background
 
@@ -15,7 +15,7 @@ The DwC-DP introduces a more rigorous entity relationship model:
 | **MaterialEntity** | Physical matter (specimens, samples) | Supports Occurrence evidence |
 | **Agent** | Person/org who conducted event or made ID | Referenced by conductedByID, identifiedByID |
 
-BioSky's current flat model is pragmatically sufficient for community science, but these improvements will enhance data quality and GBIF export compatibility.
+Observ.ing's current flat model is pragmatically sufficient for community science, but these improvements will enhance data quality and GBIF export compatibility.
 
 ---
 

@@ -1,6 +1,6 @@
 # References
 
-Relevant papers and documentation for BioSky development.
+Relevant papers and documentation for Observ.ing development.
 
 ## Location Privacy
 

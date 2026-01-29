@@ -1,6 +1,6 @@
-# BioSky Lexicon Design Plan
+# Observ.ing Lexicon Design Plan
 
-A comprehensive plan for designing resilient AT Protocol lexicons for the BioSky biodiversity observation platform, aligned with Darwin Core standards and GBIF data models.
+A comprehensive plan for designing resilient AT Protocol lexicons for the Observ.ing biodiversity observation platform, aligned with Darwin Core standards and GBIF data models.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ A comprehensive plan for designing resilient AT Protocol lexicons for the BioSky
 
 ## Executive Summary
 
-BioSky is a decentralized biodiversity observation platform built on AT Protocol. This document outlines a lexicon design strategy that:
+Observ.ing is a decentralized biodiversity observation platform built on AT Protocol. This document outlines a lexicon design strategy that:
 
 - **Maximizes Darwin Core compatibility** for interoperability with GBIF and other biodiversity databases
 - **Follows AT Protocol best practices** including sidecar records, hydrated views, and proper versioning

@@ -1,7 +1,7 @@
 # GBIF Taxon Stability
 
 How stable are GBIF taxon identifiers and scientific names, and what are the
-implications for BioSky.
+implications for Observ.ing.
 
 ## Taxon Key (Numeric ID) Stability
 
@@ -24,7 +24,7 @@ Scientific names are more stable than numeric keys in the sense that they don't
 get reassigned to unrelated taxa. However, names do change through taxonomic
 revisions (synonymy, reclassification, etc.).
 
-BioSky stores both `taxonId` (the GBIF key) and `scientificName` alongside
+Observ.ing stores both `taxonId` (the GBIF key) and `scientificName` alongside
 the full taxonomic hierarchy (`kingdom`, `phylum`, `class`, `order`, `family`,
 `genus`). This gives two paths to resolve a taxon if one changes.
 
@@ -48,7 +48,7 @@ better when given higher taxonomy context.
 
 Reference: [GBIF Taxonomy Interpretation](https://techdocs.gbif.org/en/data-processing/taxonomy-interpretation)
 
-## Implications for BioSky
+## Implications for Observ.ing
 
 - When querying or grouping by scientific name, always include kingdom (or other
   higher classification) to avoid conflating unrelated organisms.

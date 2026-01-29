@@ -1,6 +1,6 @@
 # Darwin Core Lexicons
 
-BioSky uses [Darwin Core](https://dwc.tdwg.org/) terminology for biodiversity data interoperability. Fields marked with ✅ are implemented, ⚠️ are partially implemented or mapped differently, and ❌ are not yet implemented.
+Observ.ing uses [Darwin Core](https://dwc.tdwg.org/) terminology for biodiversity data interoperability. Fields marked with ✅ are implemented, ⚠️ are partially implemented or mapped differently, and ❌ are not yet implemented.
 
 ## org.rwell.test.occurrence
 
@@ -40,7 +40,7 @@ An occurrence is "an existence of an Organism at a particular place at a particu
 
 ### Fields
 
-| BioSky Field | GBIF / Darwin Core | Status | Description |
+| Observ.ing Field | GBIF / Darwin Core | Status | Description |
 |--------------|-------------------|--------|-------------|
 | `scientificName` | dwc:scientificName | ⚠️ | **DEPRECATED** - Use identification records instead. Optional legacy field. |
 | `eventDate` | dwc:eventDate | ✅ | Date-time of the occurrence (ISO 8601) |
@@ -52,7 +52,7 @@ An occurrence is "an existence of an Organism at a particular place at a particu
 | `notes` | dwc:occurrenceRemarks | ✅ | Notes about the occurrence |
 | `blobs` | dwc:associatedMedia | ✅ | Array of image references |
 | `license` | dcterms:license | ✅ | SPDX identifiers (CC0, CC-BY, etc.) |
-| `createdAt` | — | ✅ | Record creation timestamp (BioSky-specific) |
+| `createdAt` | — | ✅ | Record creation timestamp (Observ.ing-specific) |
 | (AT Protocol URI) | dwc:occurrenceID | ⚠️ | `at://did:plc:.../org.rwell.test.occurrence/...` |
 | (DID) | dwc:recordedBy | ⚠️ | Derived from AT Protocol identity |
 | — | dwc:basisOfRecord | ❌ | Always assumed `HumanObservation` |
@@ -124,16 +124,16 @@ A taxonomic determination (dwc:Identification) for an occurrence.
 
 ### Fields
 
-| BioSky Field | GBIF / Darwin Core | Status | Description |
+| Observ.ing Field | GBIF / Darwin Core | Status | Description |
 |--------------|-------------------|--------|-------------|
 | `taxonName` | dwc:scientificName | ✅ | The scientific name being proposed |
 | `taxonRank` | dwc:taxonRank | ✅ | Taxonomic rank (species, genus, family) |
 | `comment` | dwc:identificationRemarks | ✅ | Notes about the identification |
 | `createdAt` | dwc:dateIdentified | ✅ | Date the identification was made |
-| `subject` | — | ✅ | AT Protocol strong reference to the occurrence (BioSky-specific) |
-| `subjectIndex` | — | ✅ | Index when multiple organisms in one observation (BioSky-specific) |
-| `isAgreement` | — | ✅ | Whether ID agrees with community consensus (BioSky-specific) |
-| `confidence` | — | ✅ | Identifier's confidence level: low/medium/high (BioSky-specific) |
+| `subject` | — | ✅ | AT Protocol strong reference to the occurrence (Observ.ing-specific) |
+| `subjectIndex` | — | ✅ | Index when multiple organisms in one observation (Observ.ing-specific) |
+| `isAgreement` | — | ✅ | Whether ID agrees with community consensus (Observ.ing-specific) |
+| `confidence` | — | ✅ | Identifier's confidence level: low/medium/high (Observ.ing-specific) |
 | (AT Protocol URI) | dwc:identificationID | ⚠️ | AT URI serves as identifier |
 | (DID) | dwc:identifiedBy | ⚠️ | Derived from AT Protocol identity |
 | — | dwc:identificationQualifier | ❌ | Qualifier like "cf." or "aff." |

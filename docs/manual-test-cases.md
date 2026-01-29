@@ -1,6 +1,6 @@
 # Manual Test Cases
 
-Test cases for BioSky QA.
+Test cases for Observ.ing QA.
 
 ---
 
@@ -34,7 +34,7 @@ Test cases for BioSky QA.
 ### TC-NAV-001: Home page load
 1. Navigate to `/`
 
-**Expected:** Feed view loads, header shows "BioSky", bottom nav is visible
+**Expected:** Feed view loads, header shows "Observ.ing", bottom nav is visible
 
 ### TC-NAV-002: Map view load
 1. Navigate to `/map`
@@ -525,7 +525,7 @@ Test cases for BioSky QA.
 ### TC-API-001: Swagger UI loads
 1. Navigate to `/api/docs`
 
-**Expected:** Swagger UI loads with "BioSky API" title, showing all endpoint categories (Auth, Occurrences, Feeds, Profiles, Identifications, Comments, Taxonomy)
+**Expected:** Swagger UI loads with "Observ.ing API" title, showing all endpoint categories (Auth, Occurrences, Feeds, Profiles, Identifications, Comments, Taxonomy)
 
 ### TC-API-002: OpenAPI spec endpoint
 1. Navigate to `/api/openapi.json`

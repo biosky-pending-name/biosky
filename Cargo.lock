@@ -144,50 +144,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
-name = "biosky-ingester"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "futures-util",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tokio-test",
- "tokio-tungstenite",
- "tower",
- "tower-http",
- "tracing",
- "tracing-stackdriver",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "biosky-media-proxy"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "hex",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
- "tokio-test",
- "tower",
- "tower-http",
- "tracing",
- "tracing-stackdriver",
- "tracing-subscriber",
- "url",
- "urlencoding",
-]
-
-[[package]]
 name = "bitflags"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1272,6 +1228,50 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
  "libm",
+]
+
+[[package]]
+name = "observing-ingester"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tokio-test",
+ "tokio-tungstenite",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-stackdriver",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "observing-media-proxy"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "hex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tokio-test",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-stackdriver",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]

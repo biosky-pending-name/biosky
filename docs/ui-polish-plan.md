@@ -1,6 +1,6 @@
 # UI Cleanup & Polish Plan
 
-Based on a review of all pages in the BioSky frontend.
+Based on a review of all pages in the Observ.ing frontend.
 
 ## Pages Reviewed
 
@@ -41,7 +41,7 @@ Both show the same content; unclear differentiation between the two tabs.
 
 | Area | Issue | Suggestion |
 |------|-------|------------|
-| **Header** | "BioSky" logo is plain text | Consider adding an icon/logo |
+| **Header** | "Observ.ing" logo is plain text | Consider adding an icon/logo |
 | **Observation detail** | No visual indicator for image loading | Add skeleton/placeholder |
 | **Profile page** | "View on AT Protocol" button placement feels disconnected | Move closer to header or add context |
 | **Taxon media** | Images have no lightbox/zoom | Add image viewer on click |
