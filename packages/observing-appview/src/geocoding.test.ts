@@ -284,7 +284,7 @@ describe("GeocodingService", () => {
 
       await service.reverseGeocode(40.0, -100.0);
 
-      expect(mockFetch.mock.calls[0]?.[1]?.headers?.["User-Agent"]).toContain("BioSky");
+      expect(mockFetch.mock.calls[0]?.[1]?.headers?.["User-Agent"]).toContain("Observ.ing");
     });
   });
 

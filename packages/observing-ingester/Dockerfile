@@ -40,12 +40,12 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the binary from builder
-COPY --from=builder /app/target/release/biosky-ingester /app/biosky-ingester
+COPY --from=builder /app/target/release/observing-ingester /app/observing-ingester
 
 # Set environment defaults
-ENV RUST_LOG=biosky_ingester=info
+ENV RUST_LOG=observing_ingester=info
 ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["/app/biosky-ingester"]
+CMD ["/app/observing-ingester"]

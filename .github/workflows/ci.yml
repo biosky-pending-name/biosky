@@ -42,11 +42,11 @@ jobs:
       - name: Check generated types
         run: |
           npm run generate-types
-          git diff --exit-code packages/biosky-appview/src/generated/
+          git diff --exit-code packages/observing-appview/src/generated/
       - name: Check OpenAPI spec
         run: |
-          npm run openapi -w biosky-shared
-          git diff --exit-code packages/biosky-shared/openapi.json
+          npm run openapi -w observing-shared
+          git diff --exit-code packages/observing-shared/openapi.json
 
   build:
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
-      - run: npm run build -w biosky-shared
+      - run: npm run build -w observing-shared
       - run: npm run test:run
 
   # Rust jobs - run in parallel
@@ -79,7 +79,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - run: cargo fmt --manifest-path packages/biosky-ingester/Cargo.toml -- --check
+      - run: cargo fmt --manifest-path packages/observing-ingester/Cargo.toml -- --check
 
   rust-audit:
     runs-on: ubuntu-latest
@@ -99,8 +99,8 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/biosky-ingester
-      - run: cargo clippy --manifest-path packages/biosky-ingester/Cargo.toml -- -D warnings
+          workspaces: packages/observing-ingester
+      - run: cargo clippy --manifest-path packages/observing-ingester/Cargo.toml -- -D warnings
         env:
           SQLX_OFFLINE: true
 
@@ -111,13 +111,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/biosky-ingester
+          workspaces: packages/observing-ingester
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: sqlx-cli
           no-default-features: true
           features: postgres
-      - working-directory: packages/biosky-ingester
+      - working-directory: packages/observing-ingester
         run: cargo sqlx prepare --check
 
   rust-test:
@@ -127,8 +127,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/biosky-ingester
-      - run: cargo test --manifest-path packages/biosky-ingester/Cargo.toml
+          workspaces: packages/observing-ingester
+      - run: cargo test --manifest-path packages/observing-ingester/Cargo.toml
         env:
           SQLX_OFFLINE: true
 
@@ -142,16 +142,16 @@ jobs:
         include:
           - service: appview
             context: .
-            dockerfile: packages/biosky-appview/Dockerfile
+            dockerfile: packages/observing-appview/Dockerfile
           - service: api
             context: .
-            dockerfile: packages/biosky-api/Dockerfile
+            dockerfile: packages/observing-api/Dockerfile
           - service: ingester
-            context: packages/biosky-ingester
-            dockerfile: packages/biosky-ingester/Dockerfile
+            context: packages/observing-ingester
+            dockerfile: packages/observing-ingester/Dockerfile
           - service: media-proxy
             context: .
-            dockerfile: packages/biosky-media-proxy/Dockerfile
+            dockerfile: packages/observing-media-proxy/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -169,7 +169,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: gcr.io/${{ secrets.GCP_PROJECT_ID }}/biosky-${{ matrix.service }}:latest
+          tags: gcr.io/${{ secrets.GCP_PROJECT_ID }}/observing-${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
@@ -183,7 +183,7 @@ jobs:
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: us-central1
-      PUBLIC_URL: https://biosky-appview-378013734384.us-central1.run.app
+      PUBLIC_URL: https://observing-appview-378013734384.us-central1.run.app
     steps:
       - uses: google-github-actions/auth@v2
         with:
@@ -194,45 +194,45 @@ jobs:
       - name: Deploy appview
         id: deploy-appview
         run: |
-          URL=$(gcloud run deploy biosky-appview \
-            --image=gcr.io/$PROJECT_ID/biosky-appview:latest \
+          URL=$(gcloud run deploy observing-appview \
+            --image=gcr.io/$PROJECT_ID/observing-appview:latest \
             --region=$REGION \
             --allow-unauthenticated \
-            --add-cloudsql-instances=$PROJECT_ID:$REGION:biosky-db \
-            --set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:$REGION:biosky-db,DB_NAME=biosky,DB_USER=postgres,PUBLIC_URL=$PUBLIC_URL \
-            --set-secrets=DB_PASSWORD=biosky-db-password:latest,INTERNAL_SECRET=biosky-internal-secret:latest \
+            --add-cloudsql-instances=$PROJECT_ID:$REGION:observing-db \
+            --set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:$REGION:observing-db,DB_NAME=observing,DB_USER=postgres,PUBLIC_URL=$PUBLIC_URL \
+            --set-secrets=DB_PASSWORD=observing-db-password:latest,INTERNAL_SECRET=observing-internal-secret:latest \
             --format='value(status.url)')
           echo "url=$URL" >> $GITHUB_OUTPUT
 
       - name: Deploy api
         run: |
-          gcloud run deploy biosky-api \
-            --image=gcr.io/$PROJECT_ID/biosky-api:latest \
+          gcloud run deploy observing-api \
+            --image=gcr.io/$PROJECT_ID/observing-api:latest \
             --region=$REGION \
             --allow-unauthenticated \
-            --add-cloudsql-instances=$PROJECT_ID:$REGION:biosky-db \
-            --set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:$REGION:biosky-db,DB_NAME=biosky,DB_USER=postgres,APPVIEW_URL=$PUBLIC_URL,CORS_ORIGINS=$PUBLIC_URL \
-            --set-secrets=DB_PASSWORD=biosky-db-password:latest,INTERNAL_SECRET=biosky-internal-secret:latest
+            --add-cloudsql-instances=$PROJECT_ID:$REGION:observing-db \
+            --set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:$REGION:observing-db,DB_NAME=observing,DB_USER=postgres,APPVIEW_URL=$PUBLIC_URL,CORS_ORIGINS=$PUBLIC_URL \
+            --set-secrets=DB_PASSWORD=observing-db-password:latest,INTERNAL_SECRET=observing-internal-secret:latest
 
       - name: Deploy ingester
         run: |
-          gcloud run deploy biosky-ingester \
-            --image=gcr.io/$PROJECT_ID/biosky-ingester:latest \
+          gcloud run deploy observing-ingester \
+            --image=gcr.io/$PROJECT_ID/observing-ingester:latest \
             --region=$REGION \
             --allow-unauthenticated \
             --cpu=1 \
             --memory=2Gi \
-            --add-cloudsql-instances=$PROJECT_ID:$REGION:biosky-db \
-            --set-env-vars=RUST_LOG=biosky_ingester=info,DB_HOST=/cloudsql/$PROJECT_ID:$REGION:biosky-db,DB_NAME=biosky,DB_USER=postgres,JETSTREAM_URL=wss://jetstream2.us-east.bsky.network/subscribe \
-            --set-secrets=DB_PASSWORD=biosky-db-password:latest \
+            --add-cloudsql-instances=$PROJECT_ID:$REGION:observing-db \
+            --set-env-vars=RUST_LOG=observing_ingester=info,DB_HOST=/cloudsql/$PROJECT_ID:$REGION:observing-db,DB_NAME=observing,DB_USER=postgres,JETSTREAM_URL=wss://jetstream2.us-east.bsky.network/subscribe \
+            --set-secrets=DB_PASSWORD=observing-db-password:latest \
             --min-instances=1 \
             --max-instances=1 \
             --timeout=3600
 
       - name: Deploy media-proxy
         run: |
-          gcloud run deploy biosky-media-proxy \
-            --image=gcr.io/$PROJECT_ID/biosky-media-proxy:latest \
+          gcloud run deploy observing-media-proxy \
+            --image=gcr.io/$PROJECT_ID/observing-media-proxy:latest \
             --region=$REGION \
             --allow-unauthenticated \
-            --set-env-vars=RUST_LOG=biosky_media_proxy=info,LOG_FORMAT=json
+            --set-env-vars=RUST_LOG=observing_media_proxy=info,LOG_FORMAT=json

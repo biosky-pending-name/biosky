@@ -6,9 +6,9 @@ Three services deployed via `cloudbuild.yaml`:
 
 | Service | Dockerfile | Public | Cloud SQL | Notes |
 |---------|------------|--------|-----------|-------|
-| biosky-appview | packages/biosky-appview/Dockerfile | Yes | Yes | Main API + serves frontend |
-| biosky-ingester | packages/biosky-ingester/Dockerfile | Yes | Yes | min-instances=1 (always running) |
-| biosky-media-proxy | packages/biosky-media-proxy/Dockerfile | Yes | No | Stateless image cache |
+| observing-appview | packages/observing-appview/Dockerfile | Yes | Yes | Main API + serves frontend |
+| observing-ingester | packages/observing-ingester/Dockerfile | Yes | Yes | min-instances=1 (always running) |
+| observing-media-proxy | packages/observing-media-proxy/Dockerfile | Yes | No | Stateless image cache |
 
 ## Manual Deploy
 
@@ -27,11 +27,11 @@ Push to `main` triggers deployment after CI checks pass. See `.github/workflows/
 ### Database (appview, ingester)
 
 ```bash
-DATABASE_URL=postgresql://user:pass@host:5432/biosky
+DATABASE_URL=postgresql://user:pass@host:5432/observing
 
 # Or for Cloud SQL:
 DB_HOST=/cloudsql/project:region:instance
-DB_NAME=biosky
+DB_NAME=observing
 DB_USER=postgres
 DB_PASSWORD=...
 ```

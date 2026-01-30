@@ -13,24 +13,24 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 
 # Copy package manifests
-COPY packages/biosky-ingester/Cargo.toml packages/biosky-ingester/
-COPY packages/biosky-media-proxy/Cargo.toml packages/biosky-media-proxy/
+COPY packages/observing-ingester/Cargo.toml packages/observing-ingester/
+COPY packages/observing-media-proxy/Cargo.toml packages/observing-media-proxy/
 
 # Create dummy sources to cache dependencies
-RUN mkdir -p packages/biosky-ingester/src packages/biosky-media-proxy/src && \
-    echo "fn main() {}" > packages/biosky-ingester/src/main.rs && \
-    echo "" > packages/biosky-ingester/src/lib.rs && \
-    echo "fn main() {}" > packages/biosky-media-proxy/src/main.rs && \
-    echo "" > packages/biosky-media-proxy/src/lib.rs
+RUN mkdir -p packages/observing-ingester/src packages/observing-media-proxy/src && \
+    echo "fn main() {}" > packages/observing-ingester/src/main.rs && \
+    echo "" > packages/observing-ingester/src/lib.rs && \
+    echo "fn main() {}" > packages/observing-media-proxy/src/main.rs && \
+    echo "" > packages/observing-media-proxy/src/lib.rs
 
 # Build dependencies only (this layer will be cached)
-RUN cargo build --release -p biosky-media-proxy && rm -rf packages/biosky-media-proxy/src
+RUN cargo build --release -p observing-media-proxy && rm -rf packages/observing-media-proxy/src
 
 # Copy real source code for media proxy
-COPY packages/biosky-media-proxy/src packages/biosky-media-proxy/src
+COPY packages/observing-media-proxy/src packages/observing-media-proxy/src
 
 # Build for release (touch to invalidate cache for main.rs)
-RUN touch packages/biosky-media-proxy/src/main.rs && cargo build --release -p biosky-media-proxy
+RUN touch packages/observing-media-proxy/src/main.rs && cargo build --release -p observing-media-proxy
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -47,13 +47,13 @@ WORKDIR /app
 RUN mkdir -p /app/cache/media
 
 # Copy the binary from builder
-COPY --from=builder /app/target/release/biosky-media-proxy /app/biosky-media-proxy
+COPY --from=builder /app/target/release/observing-media-proxy /app/observing-media-proxy
 
 # Set environment defaults
-ENV RUST_LOG=biosky_media_proxy=info
+ENV RUST_LOG=observing_media_proxy=info
 ENV PORT=3001
 ENV CACHE_DIR=/app/cache/media
 
 EXPOSE 3001
 
-CMD ["/app/biosky-media-proxy"]
+CMD ["/app/observing-media-proxy"]

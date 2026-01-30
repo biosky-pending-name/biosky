@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://biosky-appview-378013734384.us-central1.run.app",
+      "url": "https://observing-appview-378013734384.us-central1.run.app",
       "description": "Production"
     },
     {
