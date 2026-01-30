@@ -24,7 +24,8 @@ use tracing_subscriber::{prelude::*, EnvFilter};
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    let env_filter = EnvFilter::from_default_env().add_directive("observing_ingester=info".parse()?);
+    let env_filter =
+        EnvFilter::from_default_env().add_directive("observing_ingester=info".parse()?);
 
     // Use JSON format for GCP Cloud Logging when LOG_FORMAT=json
     if std::env::var("LOG_FORMAT")
