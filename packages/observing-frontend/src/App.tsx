@@ -47,7 +47,9 @@ function AppContent() {
         severity="warning"
         sx={{
           borderRadius: 0,
-          py: 0.5,
+          py: 1,
+          flexShrink: 0,
+          ml: { md: `${DRAWER_WIDTH}px` },
           "& .MuiAlert-message": {
             width: "100%",
             textAlign: "center",
