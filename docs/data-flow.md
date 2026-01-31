@@ -4,26 +4,97 @@ This document describes how data flows through the Observ.ing system and which s
 
 ## Architecture Overview
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   AppView   │────▶│  User's PDS │
-│  (Browser)  │     │ (OAuth/ATP) │     │  (Bluesky)  │
-└─────────────┘     └─────────────┘     └──────┬──────┘
-       │                   │                   │
-       │                   ▼                   ▼
-       │            ┌─────────────┐     ┌─────────────┐
-       │            │  PostgreSQL │◀────│  Ingester   │◀── Jetstream
-       │            │  + PostGIS  │     │   (Rust)    │    Firehose
-       │            └──────┬──────┘     └─────────────┘
-       │                   │
-       │                   ▼
-       │            ┌─────────────┐
-       └───────────▶│     API     │
-                    │  (Express)  │
-                    └─────────────┘
+```mermaid
+flowchart TB
+    subgraph Frontend["Frontend (React)"]
+        Modal["Create Observation Modal<br/>UploadModal.tsx"]
+        FormData["Form Data<br/>• species<br/>• location (lat/lng)<br/>• photos<br/>• notes<br/>• license<br/>• co-observers"]
+        Base64["Base64 Encode Images"]
+        Modal --> FormData --> Base64
+    end
+
+    subgraph AppView["AppView (Express)"]
+        API["POST /api/occurrences<br/>api.ts:268-443"]
+        Auth["OAuth Authentication<br/>oauth.ts"]
+        BlobUpload["Upload Images to PDS<br/>agent.uploadBlob()"]
+        GBIF["Taxonomy Validation<br/>GBIF API"]
+        Geocode["Reverse Geocoding<br/>Nominatim API"]
+        BuildRecord["Build AT Protocol Record<br/>org.rwell.test.occurrence"]
+        PrivateData["Save Private Coordinates<br/>occurrence_private_data table"]
+    end
+
+    subgraph ATProtocol["AT Protocol"]
+        PDS["User's Personal Data Server<br/>createRecord()"]
+        URI["Returns URI + CID<br/>at://did:plc:xxx/org.rwell.test.occurrence/rkey"]
+    end
+
+    subgraph Firehose["AT Protocol Network"]
+        Jetstream["Jetstream<br/>wss://jetstream2.us-east.bsky.network"]
+        Filter["Collection Filter<br/>org.rwell.test.occurrence"]
+    end
+
+    subgraph Ingester["Ingester (Rust)"]
+        WS["WebSocket Connection<br/>firehose.rs"]
+        Parse["Parse JSON Event<br/>Extract fields"]
+        Validate["Validate Required Fields<br/>• lat/lng required<br/>• eventDate required"]
+        Upsert["Upsert to Database<br/>database.rs:106-336"]
+    end
+
+    subgraph Database["PostgreSQL + PostGIS"]
+        Occurrences["occurrences table<br/>• uri (PK)<br/>• did, cid<br/>• scientific_name<br/>• event_date<br/>• location (geography)<br/>• taxonomy fields<br/>• Darwin Core geography"]
+        Observers["occurrence_observers table<br/>• owner<br/>• co-observers"]
+        Cursor["ingester_state table<br/>Resume cursor"]
+    end
+
+    %% Main flow
+    Base64 -->|"POST /api/occurrences<br/>JSON payload"| API
+    API --> Auth
+    Auth --> BlobUpload
+    BlobUpload --> GBIF
+    GBIF --> Geocode
+    Geocode --> BuildRecord
+    BuildRecord -->|"agent.com.atproto.repo.createRecord()"| PDS
+    BuildRecord --> PrivateData
+    PDS --> URI
+    URI -->|"Record broadcast"| Jetstream
+    Jetstream --> Filter
+    Filter -->|"JSON event stream"| WS
+    WS --> Parse
+    Parse --> Validate
+    Validate --> Upsert
+    Upsert --> Occurrences
+    Upsert --> Observers
+    WS -->|"Save cursor every 30s"| Cursor
+
+    %% Response flow
+    URI -.->|"Response: { uri, cid }"| API
+    API -.->|"Response to frontend"| Modal
 ```
 
 **Key insight**: Writes go through AT Protocol (user's PDS), then get indexed via the firehose. Reads come directly from PostgreSQL.
+
+### Key Files
+
+| Component | File | Lines |
+|-----------|------|-------|
+| Create Modal | `packages/observing-frontend/src/components/modals/UploadModal.tsx` | - |
+| API Endpoint | `packages/observing-appview/src/api.ts` | 268-443 |
+| OAuth Service | `packages/observing-appview/src/auth/oauth.ts` | 392-405 |
+| Firehose | `crates/observing-ingester/src/firehose.rs` | 164-279 |
+| Ingester Main | `crates/observing-ingester/src/main.rs` | 127-149 |
+| Database Ops | `crates/observing-ingester/src/database.rs` | 106-336 |
+| Prisma Schema | `packages/observing-appview/prisma/schema.prisma` | - |
+
+### Data Transformations by Stage
+
+| Stage | Input | Output | Transformation |
+|-------|-------|--------|----------------|
+| Frontend | User form input + files | JSON + Base64 images | Image encoding, form serialization |
+| AppView | JSON request | AT Protocol record | Blob upload, GBIF lookup, geocoding |
+| PDS | Record JSON | URI + CID | Cryptographic signing, storage |
+| Jetstream | PDS events | Filtered JSON stream | Collection filtering |
+| Ingester | JSON events | SQL statements | Field extraction, validation |
+| Database | SQL | Stored rows | PostGIS point encoding, indexing |
 
 ## Services
 
