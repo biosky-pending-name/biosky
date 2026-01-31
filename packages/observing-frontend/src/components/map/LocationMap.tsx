@@ -48,6 +48,7 @@ export function LocationMap({
       center: [longitude, latitude],
       zoom: 14,
       interactive: true,
+      scrollZoom: false,
     });
 
     mapInstance.addControl(
