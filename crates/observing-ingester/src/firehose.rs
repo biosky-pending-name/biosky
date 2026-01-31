@@ -264,7 +264,10 @@ impl FirehoseSubscription {
                     time,
                     record: commit.record,
                 };
-                debug!("[Interaction] {}: {}", interaction_event.action, interaction_event.uri);
+                debug!(
+                    "[Interaction] {}: {}",
+                    interaction_event.action, interaction_event.uri
+                );
                 let _ = self
                     .event_tx
                     .send(FirehoseEvent::Interaction(interaction_event))

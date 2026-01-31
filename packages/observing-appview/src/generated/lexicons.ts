@@ -172,6 +172,113 @@ export const schemaDict = {
       },
     },
   },
+  OrgRwellTestInteraction: {
+    lexicon: 1,
+    id: 'org.rwell.test.interaction',
+    defs: {
+      main: {
+        type: 'record',
+        description:
+          'Species interaction documenting ecological relationship between organisms.',
+        key: 'tid',
+        record: {
+          type: 'object',
+          required: [
+            'subjectA',
+            'subjectB',
+            'interactionType',
+            'direction',
+            'createdAt',
+          ],
+          properties: {
+            subjectA: {
+              type: 'ref',
+              ref: 'lex:org.rwell.test.interaction#interactionSubject',
+              description: 'The first subject (actor) in the interaction.',
+            },
+            subjectB: {
+              type: 'ref',
+              ref: 'lex:org.rwell.test.interaction#interactionSubject',
+              description: 'The second subject (recipient) in the interaction.',
+            },
+            interactionType: {
+              type: 'string',
+              description:
+                'Type of ecological interaction between the subjects.',
+              knownValues: [
+                'predation',
+                'pollination',
+                'parasitism',
+                'herbivory',
+                'symbiosis',
+                'mutualism',
+                'competition',
+                'shelter',
+                'transportation',
+                'oviposition',
+                'seed_dispersal',
+              ],
+              maxLength: 64,
+            },
+            direction: {
+              type: 'string',
+              description:
+                'Direction of the interaction: AtoB means A acts on B, BtoA means B acts on A, bidirectional means mutual.',
+              enum: ['AtoB', 'BtoA', 'bidirectional'],
+              default: 'AtoB',
+            },
+            confidence: {
+              type: 'string',
+              description: 'Confidence level in the interaction observation.',
+              enum: ['low', 'medium', 'high'],
+              default: 'medium',
+            },
+            comment: {
+              type: 'string',
+              description: 'Additional notes about the interaction.',
+              maxLength: 3000,
+            },
+            createdAt: {
+              type: 'string',
+              format: 'datetime',
+              description: 'Timestamp when this record was created.',
+            },
+          },
+        },
+      },
+      interactionSubject: {
+        type: 'object',
+        description:
+          'A subject in an interaction - can reference an existing occurrence or just specify a taxon name.',
+        properties: {
+          occurrence: {
+            type: 'ref',
+            ref: 'lex:com.atproto.repo.strongRef',
+            description: 'Reference to an existing occurrence record.',
+          },
+          subjectIndex: {
+            type: 'integer',
+            description:
+              'Index of the subject within the occurrence (for multi-subject observations).',
+            minimum: 0,
+            maximum: 99,
+            default: 0,
+          },
+          taxonName: {
+            type: 'string',
+            description:
+              'Scientific name of the organism (for unobserved subjects or to override occurrence ID).',
+            maxLength: 256,
+          },
+          kingdom: {
+            type: 'string',
+            description: 'Taxonomic kingdom to disambiguate homonyms.',
+            maxLength: 64,
+          },
+        },
+      },
+    },
+  },
   OrgRwellTestLike: {
     lexicon: 1,
     id: 'org.rwell.test.like',
@@ -531,6 +638,7 @@ export function validate(
 export const ids = {
   OrgRwellTestComment: 'org.rwell.test.comment',
   OrgRwellTestIdentification: 'org.rwell.test.identification',
+  OrgRwellTestInteraction: 'org.rwell.test.interaction',
   OrgRwellTestLike: 'org.rwell.test.like',
   OrgRwellTestOccurrence: 'org.rwell.test.occurrence',
 } as const
